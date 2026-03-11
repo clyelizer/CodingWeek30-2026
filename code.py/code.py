@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Diagnostic Appendicite - Expert</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background-image: url('/static/background.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+
+        .main-card {
+            border-radius: 16px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+            overflow: hidden;
+            background: rgba(10, 30, 70, 0.45);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, rgba(26,86,219,0.7) 0%, rgba(30,144,255,0.7) 100%);
+            padding: 24px 32px;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .card-header h4 {
+            font-weight: 600;
+            font-size: 1.2rem;
+            letter-spacing: 0.01em;
+        }
+
+        .card-header p {
+            font-size: 0.82rem;
+            opacity: 0.85;
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 28px 32px;
+            background: transparent;
+        }
+
+        fieldset {
+            border: 1px solid rgba(255,255,255,0.18);
+            padding: 18px 20px;
+            margin-bottom: 18px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.07);
+        }
+
+        legend {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #ffffff;
+            width: auto;
+            padding: 0 10px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+        }
+
+        .form-label {
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: rgba(255,255,255,0.85);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .form-control, .form-select {
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            padding: 9px 13px;
+            color: #ffffff;
+            background-color: rgba(255,255,255,0.1);
+            backdrop-filter: blur(4px);
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: rgba(255,255,255,0.65);
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.12);
+            background-color: rgba(255,255,255,0.18);
+            color: #ffffff;
+            outline: none;
+        }
+
+        .form-control::placeholder { color: rgba(255,255,255,0.4); }
+
+        .form-select option {
+            background: #0d2150;
+            color: #ffffff;
+        }
+
+        .input-group-text {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-left: none;
+            border-radius: 0 8px 8px 0;
+            color: rgba(255,255,255,0.65);
+            font-size: 0.78rem;
+            font-weight: 500;
+        }
+
+        .input-group .form-control {
+            border-right: none;
+            border-radius: 8px 0 0 8px;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, #1a56db 0%, #1e90ff 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 4px 16px rgba(26,86,219,0.5);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-submit:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 22px rgba(26,86,219,0.6);
+            color: white;
+        }
+
+        .disclaimer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.45);
+            margin-top: 12px;
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body class="py-5">
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card main-card">
+
+                <div class="card-header text-white text-center">
+                    <img src="/static/ecole.png" alt="Logo" class="img-fluid mb-3" style="max-height: 52px;">
+                    <h4 class="mb-1">Diagnostic Appendicite</h4>
+                    <p>Système expert d'aide à la décision clinique</p>
+                </div>
+
+                <div class="card-body">
+                    <form action="/predict" method="post">
+
+                        <fieldset>
+                            <legend>1. Informations Patient</legend>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Âge</label>
+                                    <div class="input-group">
+                                        <input type="number" name="age" class="form-control" placeholder="Ex : 35" min="0" max="120" required>
+                                        <span class="input-group-text">ans</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Sexe</label>
+                                    <select name="sexe" class="form-select">
+                                        <option value="0">Homme</option>
+                                        <option value="1">Femme</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>2. Signes Cliniques</legend>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Température</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.1" name="temp" class="form-control" placeholder="37.5">
+                                        <span class="input-group-text">°C</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Douleur</label>
+                                    <div class="input-group">
+                                        <input type="number" name="douleur" max="10" min="1" class="form-control" placeholder="1–10">
+                                        <span class="input-group-text">/10</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Vomissement</label>
+                                    <select name="vomissement" class="form-select">
+                                        <option value="0">Absent</option>
+                                        <option value="1">Présent</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>3. Paramètres Biologiques</legend>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Leucocytes (WBC)</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.1" name="wbc" class="form-control" placeholder="9.5">
+                                        <span class="input-group-text">G/L</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Neutrophiles</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.1" name="neutro" class="form-control" placeholder="70">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">CRP</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.1" name="crp" class="form-control" placeholder="12">
+                                        <span class="input-group-text">mg/L</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Score Échographie</label>
+                                    <input type="number" name="echographie" class="form-control" placeholder="Ex : 3">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Fréquence Cardiaque</label>
+                                    <div class="input-group">
+                                        <input type="number" name="frequence_cardiaque" class="form-control" placeholder="80">
+                                        <span class="input-group-text">bpm</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <button type="submit" class="btn-submit mt-1">Analyser le risque</button>
+                        <p class="disclaimer">Usage médical supervisé — ne remplace pas l'avis d'un professionnel de santé.</p>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
