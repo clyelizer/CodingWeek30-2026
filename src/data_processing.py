@@ -16,11 +16,12 @@ import pandas as pd
 # ---------------------------------------------------------------------------
 
 NUMERIC_IMPUTE_COLS: list[str] = [
-    "Appendix_Diameter", "Neutrophil_Percentage", "Alvarado_Score",
-    "Paedriatic_Appendicitis_Score", "BMI", "Height", "RDW", "US_Number",
+    "Appendix_Diameter", "Neutrophil_Percentage", "BMI", "Height", "RDW",
     "Hemoglobin", "Thrombocyte_Count", "RBC_Count", "CRP",
-    "Body_Temperature", "WBC_Count", "Length_of_Stay", "Weight", "Age",
+    "Body_Temperature", "WBC_Count", "Weight", "Age",
     "Segmented_Neutrophils",
+    # Colonnes leakage exclues intentionnellement :
+    # Alvarado_Score, Paedriatic_Appendicitis_Score, Length_of_Stay, US_Number
 ]
 
 CATEGORICAL_IMPUTE_COLS: list[str] = [
@@ -30,6 +31,7 @@ CATEGORICAL_IMPUTE_COLS: list[str] = [
     "Coughing_Pain", "Nausea", "Loss_of_Appetite", "Dysuria", "Stool",
     "Peritonitis", "Psoas_Sign", "Appendix_on_US", "US_Performed",
     "Free_Fluids", "Diagnosis_Presumptive",
+    "Management", "Severity",  # leakage mais imputées pour garantir 0 NA
 ]
 
 SPARSE_BINARY_COLS: list[str] = [
@@ -42,7 +44,8 @@ SPARSE_BINARY_COLS: list[str] = [
 ]
 
 WINSORIZE_COLS: list[str] = [
-    "BMI", "WBC_Count", "Length_of_Stay", "Thrombocyte_Count", "Appendix_Diameter",
+    "BMI", "WBC_Count", "Thrombocyte_Count", "Appendix_Diameter",
+    # Length_of_Stay retirée : colonne leakage post-diagnostique
 ]
 
 # Colonnes exclues du modèle ML (post-diagnostiques / data leakage)
@@ -308,10 +311,11 @@ def preprocess_pipeline(df: pd.DataFrame) -> pd.DataFrame:
     Applique séquentiellement toutes les étapes de préprocessing.
 
     Ordre :
-      1. Imputation numériques (médiane)
+      1. Imputation numériques (médiane) — avant tout filtrage pour ne pas perdre
+         de lignes à cause de NaN (ex. NaN > 34 retourne False en pandas)
       2. Imputation catégorielles (mode)
-      3. Encodage colonnes éparses (binaire)
-      4. Suppression valeurs biologiquement impossibles
+      3. Suppression valeurs biologiquement impossibles
+      4. Encodage colonnes éparses (binaire)
       5. Winsorisation IQR
       6. Log-transformation CRP
 
@@ -321,8 +325,8 @@ def preprocess_pipeline(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = impute_numeric(df, NUMERIC_IMPUTE_COLS)
     df = impute_categorical(df, CATEGORICAL_IMPUTE_COLS)
-    df = encode_sparse_binary(df, SPARSE_BINARY_COLS)
     df = remove_biological_impossibles(df)
+    df = encode_sparse_binary(df, SPARSE_BINARY_COLS)
     df = winsorize_iqr(df, WINSORIZE_COLS)
     df = add_log_transform(df, "CRP", new_col="CRP_log")
     return df

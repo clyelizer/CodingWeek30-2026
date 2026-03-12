@@ -270,7 +270,7 @@ def run_training_pipeline(
             model = trainer(X_train, y_train, random_state=random_state)
             save_model(model, pathlib.Path(model_dir) / f"{name}.joblib")
             models[name] = model
-            print("✓")
+            print("OK")
         except ImportError as e:
             print(f"⚠ ignoré ({e})")
 
