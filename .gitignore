@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Environnements virtuels
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ML artefacts auto-générés
+catboost_info/
+
+# Données brutes (ne pas versionner)
+data/external/
+data/raw/
+
+# Données traitées et modèles (gros fichiers binaires)
+data/processed/
+models/
+
+# Logs et fichiers temporaires
+*.txt
+*.log
+inspect_*.txt
+_*.py
+
+# OS
+.DS_Store
+Thumbs.db
