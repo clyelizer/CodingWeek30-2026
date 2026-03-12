@@ -9,7 +9,6 @@ Chaque test est :
   - Précis (une seule assertion par test)
 """
 
-import pathlib
 import tempfile
 
 import numpy as np
@@ -34,21 +33,24 @@ from src.train_model import (
 # Fixtures — données synthétiques minimales
 # ---------------------------------------------------------------------------
 
+
 def _make_xy(n: int = 120):
     """Crée X (10 features) et y binaire synthétiques."""
     rng = np.random.default_rng(0)
-    X = pd.DataFrame({
-        "Lower_Right_Abd_Pain":           rng.integers(0, 2, n).astype(float),
-        "Migratory_Pain":                 rng.integers(0, 2, n).astype(float),
-        "Body_Temperature":               rng.uniform(36, 40, n),
-        "WBC_Count":                      rng.uniform(3, 25, n),
-        "CRP":                            rng.uniform(0, 200, n),
-        "Neutrophil_Percentage":          rng.uniform(30, 90, n),
-        "Ipsilateral_Rebound_Tenderness": rng.integers(0, 2, n).astype(float),
-        "Appendix_Diameter":              rng.uniform(4, 15, n),
-        "Nausea":                         rng.integers(0, 2, n).astype(float),
-        "Age":                            rng.uniform(1, 18, n),
-    })
+    X = pd.DataFrame(
+        {
+            "Lower_Right_Abd_Pain": rng.integers(0, 2, n).astype(float),
+            "Migratory_Pain": rng.integers(0, 2, n).astype(float),
+            "Body_Temperature": rng.uniform(36, 40, n),
+            "WBC_Count": rng.uniform(3, 25, n),
+            "CRP": rng.uniform(0, 200, n),
+            "Neutrophil_Percentage": rng.uniform(30, 90, n),
+            "Ipsilateral_Rebound_Tenderness": rng.integers(0, 2, n).astype(float),
+            "Appendix_Diameter": rng.uniform(4, 15, n),
+            "Nausea": rng.integers(0, 2, n).astype(float),
+            "Age": rng.uniform(1, 18, n),
+        }
+    )
     y = pd.Series(rng.integers(0, 2, n), name="Diagnosis")
     return X, y
 
@@ -69,6 +71,7 @@ def trained_rf(xy):
 # ---------------------------------------------------------------------------
 # Tests — build_* : structure du pipeline
 # ---------------------------------------------------------------------------
+
 
 def test_build_logistic_regression_has_two_steps():
     """build_logistic_regression → pipeline a exactement 2 étapes."""
@@ -104,6 +107,7 @@ def test_build_random_forest_last_step_is_clf():
 # Tests — train_model
 # ---------------------------------------------------------------------------
 
+
 def test_train_model_returns_pipeline(xy):
     """train_model → retourne un objet Pipeline sklearn."""
     X, y = xy
@@ -124,6 +128,7 @@ def test_train_model_fitted_can_predict(xy):
 # ---------------------------------------------------------------------------
 # Tests — evaluate_model
 # ---------------------------------------------------------------------------
+
 
 def test_evaluate_model_roc_auc_in_range(trained_rf, xy):
     """evaluate_model → roc_auc ∈ [0, 1]."""
@@ -150,11 +155,12 @@ def test_evaluate_model_accuracy_in_range(trained_rf, xy):
 # Tests — select_best_model
 # ---------------------------------------------------------------------------
 
+
 def test_select_best_model_returns_highest_auc():
     """select_best_model → retourne le nom avec le plus haut roc_auc."""
     results = {
-        "lr":  {"roc_auc": 0.82, "f1": 0.75, "accuracy": 0.80},
-        "rf":  {"roc_auc": 0.91, "f1": 0.85, "accuracy": 0.88},
+        "lr": {"roc_auc": 0.82, "f1": 0.75, "accuracy": 0.80},
+        "rf": {"roc_auc": 0.91, "f1": 0.85, "accuracy": 0.88},
         "svm": {"roc_auc": 0.87, "f1": 0.80, "accuracy": 0.84},
     }
     assert select_best_model(results) == "rf"
@@ -173,6 +179,7 @@ def test_select_best_model_name_in_results():
 # ---------------------------------------------------------------------------
 # Tests — save_model / load_model
 # ---------------------------------------------------------------------------
+
 
 def test_save_model_creates_file(trained_rf):
     """save_model → le fichier .joblib existe après sauvegarde."""
@@ -197,4 +204,3 @@ def test_load_model_can_predict(trained_rf, xy):
         loaded = load_model(out)
         preds = loaded.predict(X)
         assert len(preds) == len(y)
-

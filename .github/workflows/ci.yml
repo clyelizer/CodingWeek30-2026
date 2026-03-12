@@ -53,7 +53,7 @@ jobs:
       - name: Install ruff
         run: pip install ruff
       - name: Lint with ruff
-        run: ruff check src/ app/ tests/ --select E,W,F --ignore E501
+        run: ruff check src/ app/ tests/ --select E,W,F --ignore E501,E402
 
   docker:
     runs-on: ubuntu-latest

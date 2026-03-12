@@ -30,11 +30,10 @@ import pathlib
 from typing import Any
 
 import joblib
-import numpy as np
 import pandas as pd
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_auc_score, f1_score, classification_report
+from sklearn.metrics import roc_auc_score, f1_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
@@ -43,6 +42,7 @@ from sklearn.svm import SVC
 # ---------------------------------------------------------------------------
 # Définitions des modèles candidats
 # ---------------------------------------------------------------------------
+
 
 def build_logistic_regression() -> Pipeline:
     """
@@ -53,14 +53,19 @@ def build_logistic_regression() -> Pipeline:
 
     Assertion testée : le pipeline retourné contient bien 2 étapes.
     """
-    pipeline = Pipeline([
-        ("scaler", StandardScaler()),
-        ("clf", LogisticRegression(
-            class_weight="balanced",
-            max_iter=1000,
-            random_state=42,
-        )),
-    ])
+    pipeline = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            (
+                "clf",
+                LogisticRegression(
+                    class_weight="balanced",
+                    max_iter=1000,
+                    random_state=42,
+                ),
+            ),
+        ]
+    )
     assert len(pipeline.steps) == 2
     return pipeline
 
@@ -76,15 +81,20 @@ def build_random_forest() -> Pipeline:
 
     Assertion testée : le pipeline retourné contient bien 2 étapes.
     """
-    pipeline = Pipeline([
-        ("scaler", StandardScaler()),
-        ("clf", RandomForestClassifier(
-            n_estimators=200,
-            class_weight="balanced",
-            random_state=42,
-            n_jobs=-1,
-        )),
-    ])
+    pipeline = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            (
+                "clf",
+                RandomForestClassifier(
+                    n_estimators=200,
+                    class_weight="balanced",
+                    random_state=42,
+                    n_jobs=-1,
+                ),
+            ),
+        ]
+    )
     assert len(pipeline.steps) == 2
     return pipeline
 
@@ -98,15 +108,20 @@ def build_gradient_boosting() -> Pipeline:
 
     Assertion testée : le pipeline retourné contient bien 2 étapes.
     """
-    pipeline = Pipeline([
-        ("scaler", StandardScaler()),
-        ("clf", GradientBoostingClassifier(
-            n_estimators=200,
-            learning_rate=0.05,
-            max_depth=4,
-            random_state=42,
-        )),
-    ])
+    pipeline = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            (
+                "clf",
+                GradientBoostingClassifier(
+                    n_estimators=200,
+                    learning_rate=0.05,
+                    max_depth=4,
+                    random_state=42,
+                ),
+            ),
+        ]
+    )
     assert len(pipeline.steps) == 2
     return pipeline
 
@@ -121,15 +136,20 @@ def build_svm() -> Pipeline:
 
     Assertion testée : le pipeline retourné contient bien 2 étapes.
     """
-    pipeline = Pipeline([
-        ("scaler", StandardScaler()),
-        ("clf", SVC(
-            kernel="rbf",
-            class_weight="balanced",
-            probability=True,
-            random_state=42,
-        )),
-    ])
+    pipeline = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            (
+                "clf",
+                SVC(
+                    kernel="rbf",
+                    class_weight="balanced",
+                    probability=True,
+                    random_state=42,
+                ),
+            ),
+        ]
+    )
     assert len(pipeline.steps) == 2
     return pipeline
 
@@ -137,6 +157,7 @@ def build_svm() -> Pipeline:
 # ---------------------------------------------------------------------------
 # Entraînement
 # ---------------------------------------------------------------------------
+
 
 def train_model(
     pipeline: Pipeline,
@@ -158,6 +179,7 @@ def train_model(
 # Évaluation
 # ---------------------------------------------------------------------------
 
+
 def evaluate_model(
     pipeline: Pipeline,
     X_test: pd.DataFrame,
@@ -178,11 +200,11 @@ def evaluate_model(
     Assertion testée : roc_auc ∈ [0, 1].
     """
     y_proba = pipeline.predict_proba(X_test)[:, 1]
-    y_pred  = pipeline.predict(X_test)
+    y_pred = pipeline.predict(X_test)
 
     metrics = {
-        "roc_auc":  float(roc_auc_score(y_test, y_proba)),
-        "f1":       float(f1_score(y_test, y_pred, average="macro")),
+        "roc_auc": float(roc_auc_score(y_test, y_proba)),
+        "f1": float(f1_score(y_test, y_pred, average="macro")),
         "accuracy": float((y_pred == y_test).mean()),
     }
     assert 0.0 <= metrics["roc_auc"] <= 1.0, f"AUC invalide : {metrics['roc_auc']}"
@@ -214,6 +236,7 @@ def select_best_model(
 # Sauvegarde / chargement
 # ---------------------------------------------------------------------------
 
+
 def save_model(
     pipeline: Pipeline,
     name: str,
@@ -239,13 +262,16 @@ def load_model(path: str | pathlib.Path) -> Pipeline:
     Assertion testée : l'objet chargé est bien un Pipeline sklearn.
     """
     model = joblib.load(path)
-    assert isinstance(model, Pipeline), f"Objet chargé n'est pas un Pipeline : {type(model)}"
+    assert isinstance(model, Pipeline), (
+        f"Objet chargé n'est pas un Pipeline : {type(model)}"
+    )
     return model
 
 
 # ---------------------------------------------------------------------------
 # Pipeline complet d'entraînement
 # ---------------------------------------------------------------------------
+
 
 def run_training(
     data_path: str | pathlib.Path,
@@ -262,16 +288,16 @@ def run_training(
     # Chargement des données
     data = joblib.load(data_path)
     X_train: pd.DataFrame = data["X_train"]
-    X_test:  pd.DataFrame = data["X_test"]
-    y_train: pd.Series    = data["y_train"]
-    y_test:  pd.Series    = data["y_test"]
+    X_test: pd.DataFrame = data["X_test"]
+    y_train: pd.Series = data["y_train"]
+    y_test: pd.Series = data["y_test"]
 
     # Catalogue des modèles à entraîner
     candidates = {
         "logistic_regression": build_logistic_regression(),
-        "random_forest":       build_random_forest(),
-        "gradient_boosting":   build_gradient_boosting(),
-        "svm":                 build_svm(),
+        "random_forest": build_random_forest(),
+        "gradient_boosting": build_gradient_boosting(),
+        "svm": build_svm(),
     }
 
     results: dict[str, dict[str, float]] = {}
@@ -288,10 +314,12 @@ def run_training(
     best_name = select_best_model(results)
     best_path = pathlib.Path(models_dir) / f"{best_name}.joblib"
 
-    print(f"\n  Meilleur modèle : {best_name}  (AUC={results[best_name]['roc_auc']:.4f})")
+    print(
+        f"\n  Meilleur modèle : {best_name}  (AUC={results[best_name]['roc_auc']:.4f})"
+    )
 
     return {
-        "results":   results,
+        "results": results,
         "best_name": best_name,
         "best_path": best_path,
     }
@@ -302,7 +330,7 @@ def run_training(
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    _ROOT     = pathlib.Path(__file__).resolve().parent.parent
+    _ROOT = pathlib.Path(__file__).resolve().parent.parent
     data_path = _ROOT / "data" / "processed" / "processed_data.joblib"
     models_dir = _ROOT / "models"
 
@@ -312,4 +340,6 @@ if __name__ == "__main__":
     print("\n=== Résultats complets ===")
     for name, metrics in summary["results"].items():
         marker = " ← MEILLEUR" if name == summary["best_name"] else ""
-        print(f"  {name:<25} AUC={metrics['roc_auc']:.4f}  F1={metrics['f1']:.4f}  Acc={metrics['accuracy']:.4f}{marker}")
+        print(
+            f"  {name:<25} AUC={metrics['roc_auc']:.4f}  F1={metrics['f1']:.4f}  Acc={metrics['accuracy']:.4f}{marker}"
+        )

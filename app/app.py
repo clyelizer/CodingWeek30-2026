@@ -38,7 +38,11 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from src.train_model import load_model
-from src.evaluate_model import predict_proba_safe, compute_shap_values, make_shap_waterfall_b64
+from src.evaluate_model import (
+    predict_proba_safe,
+    compute_shap_values,
+    make_shap_waterfall_b64,
+)
 
 # ---------------------------------------------------------------------------
 # Application FastAPI
@@ -56,10 +60,10 @@ templates = Jinja2Templates(directory=str(_APP_DIR / "templates"))
 # ---------------------------------------------------------------------------
 # Chargement du modèle au démarrage (singleton)
 # ---------------------------------------------------------------------------
-_MODEL_DIR  = _ROOT / "models"
-_DATA_DIR   = _ROOT / "data" / "processed"
+_MODEL_DIR = _ROOT / "models"
+_DATA_DIR = _ROOT / "data" / "processed"
 
-_model         = None
+_model = None
 _feature_cols: list[str] = []
 _defaults: dict[str, float] = {}
 
@@ -88,6 +92,7 @@ _load_resources()
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _build_input_row(form_data: dict) -> pd.DataFrame:
     """
     Construit un DataFrame d'une ligne à partir des données brutes du formulaire.
@@ -101,17 +106,23 @@ def _build_input_row(form_data: dict) -> pd.DataFrame:
     row: dict[str, float] = dict(_defaults)
 
     # Champs numériques
-    for key in ("body_temperature", "wbc_count", "crp",
-                "neutrophil_percentage", "appendix_diameter", "age"):
-        col = key.replace("_", "_").title().replace("_", "_")
+    for key in (
+        "body_temperature",
+        "wbc_count",
+        "crp",
+        "neutrophil_percentage",
+        "appendix_diameter",
+        "age",
+    ):
+        # col = key.replace("_", "_").title().replace("_", "_")
         # Conversion key → nom de colonne (Body_Temperature, WBC_Count, …)
         col_name = {
-            "body_temperature":     "Body_Temperature",
-            "wbc_count":            "WBC_Count",
-            "crp":                  "CRP",
-            "neutrophil_percentage":"Neutrophil_Percentage",
-            "appendix_diameter":    "Appendix_Diameter",
-            "age":                  "Age",
+            "body_temperature": "Body_Temperature",
+            "wbc_count": "WBC_Count",
+            "crp": "CRP",
+            "neutrophil_percentage": "Neutrophil_Percentage",
+            "appendix_diameter": "Appendix_Diameter",
+            "age": "Age",
         }[key]
         try:
             row[col_name] = float(form_data[key])
@@ -120,9 +131,9 @@ def _build_input_row(form_data: dict) -> pd.DataFrame:
 
     # Champs binaires yes/no → 1/0
     binary_map = {
-        "lower_right_abd_pain":           "Lower_Right_Abd_Pain",
-        "migratory_pain":                 "Migratory_Pain",
-        "nausea":                         "Nausea",
+        "lower_right_abd_pain": "Lower_Right_Abd_Pain",
+        "migratory_pain": "Migratory_Pain",
+        "nausea": "Nausea",
         "ipsilateral_rebound_tenderness": "Ipsilateral_Rebound_Tenderness",
     }
     for form_key, col_name in binary_map.items():
@@ -136,28 +147,32 @@ def _build_input_row(form_data: dict) -> pd.DataFrame:
 # Routes
 # ---------------------------------------------------------------------------
 
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request) -> HTMLResponse:
     """Affiche le formulaire de saisie clinique."""
-    return templates.TemplateResponse("index.html", {
-        "request":  request,
-        "defaults": _defaults,
-    })
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "defaults": _defaults,
+        },
+    )
 
 
 @app.post("/predict", response_class=HTMLResponse)
 async def predict(
-    request:                        Request,
-    age:                            float = Form(...),
-    body_temperature:               float = Form(...),
-    wbc_count:                      float = Form(...),
-    crp:                            float = Form(...),
-    neutrophil_percentage:          float = Form(...),
-    appendix_diameter:              float = Form(...),
-    lower_right_abd_pain:           str   = Form(default="no"),
-    migratory_pain:                 str   = Form(default="no"),
-    nausea:                         str   = Form(default="no"),
-    ipsilateral_rebound_tenderness: str   = Form(default="no"),
+    request: Request,
+    age: float = Form(...),
+    body_temperature: float = Form(...),
+    wbc_count: float = Form(...),
+    crp: float = Form(...),
+    neutrophil_percentage: float = Form(...),
+    appendix_diameter: float = Form(...),
+    lower_right_abd_pain: str = Form(default="no"),
+    migratory_pain: str = Form(default="no"),
+    nausea: str = Form(default="no"),
+    ipsilateral_rebound_tenderness: str = Form(default="no"),
 ) -> HTMLResponse:
     """
     Route de prédiction.
@@ -167,23 +182,23 @@ async def predict(
     et renvoie la page résultat.
     """
     form_data = {
-        "age":                            age,
-        "body_temperature":               body_temperature,
-        "wbc_count":                      wbc_count,
-        "crp":                            crp,
-        "neutrophil_percentage":          neutrophil_percentage,
-        "appendix_diameter":              appendix_diameter,
-        "lower_right_abd_pain":           lower_right_abd_pain,
-        "migratory_pain":                 migratory_pain,
-        "nausea":                         nausea,
+        "age": age,
+        "body_temperature": body_temperature,
+        "wbc_count": wbc_count,
+        "crp": crp,
+        "neutrophil_percentage": neutrophil_percentage,
+        "appendix_diameter": appendix_diameter,
+        "lower_right_abd_pain": lower_right_abd_pain,
+        "migratory_pain": migratory_pain,
+        "nausea": nausea,
         "ipsilateral_rebound_tenderness": ipsilateral_rebound_tenderness,
     }
 
-    X    = _build_input_row(form_data)
+    X = _build_input_row(form_data)
     prob = predict_proba_safe(_model, X)
 
-    decision   = "appendicite" if prob >= 0.5 else "pas d'appendicite"
-    risk_class = "danger"      if prob >= 0.5 else "success"
+    decision = "appendicite" if prob >= 0.5 else "pas d'appendicite"
+    risk_class = "danger" if prob >= 0.5 else "success"
 
     # Graphique SHAP (non-bloquant en cas d'erreur)
     shap_b64: str | None = None
@@ -193,14 +208,17 @@ async def predict(
     except Exception as exc:
         print(f"SHAP error (non-fatal): {exc}")
 
-    return templates.TemplateResponse("result.html", {
-        "request":    request,
-        "prob":       f"{prob * 100:.1f}",
-        "decision":   decision,
-        "risk_class": risk_class,
-        "shap_b64":   shap_b64,
-        "form":       form_data,
-    })
+    return templates.TemplateResponse(
+        "result.html",
+        {
+            "request": request,
+            "prob": f"{prob * 100:.1f}",
+            "decision": decision,
+            "risk_class": risk_class,
+            "shap_b64": shap_b64,
+            "form": form_data,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -213,10 +231,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="PediAppendix — Aide au diagnostic pédiatrique de l'appendicite"
     )
-    parser.add_argument("--host",      default="0.0.0.0",  help="Host (défaut: 0.0.0.0)")
-    parser.add_argument("--port",      type=int, default=8000, help="Port (défaut: 8000)")
-    parser.add_argument("--reload",    action="store_true", help="Hot-reload")
-    parser.add_argument("--log-level", default="info",      help="Log level")
+    parser.add_argument("--host", default="0.0.0.0", help="Host (défaut: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=8000, help="Port (défaut: 8000)")
+    parser.add_argument("--reload", action="store_true", help="Hot-reload")
+    parser.add_argument("--log-level", default="info", help="Log level")
     args = parser.parse_args()
 
     uvicorn.run(

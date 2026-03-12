@@ -3,6 +3,7 @@ conftest.py — Configuration pytest pour le projet.
 Ajoute la racine du projet dans sys.path pour que `from src.xxx import ...`
 fonctionne depuis n'importe quel répertoire de lancement.
 """
+
 import sys
 import pathlib
 

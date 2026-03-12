@@ -13,7 +13,6 @@ import pathlib
 import tempfile
 
 import pandas as pd
-import pytest
 
 from src.data_processing import (
     BINARY_COLS,
@@ -34,35 +33,38 @@ from src.data_processing import (
 # ---------------------------------------------------------------------------
 
 RAW_PATH = (
-    pathlib.Path(__file__).resolve().parent.parent
-    / "data" / "raw" / "data_finale.xlsx"
+    pathlib.Path(__file__).resolve().parent.parent / "data" / "raw" / "data_finale.xlsx"
 )
 
 
 def _make_minimal_df(n: int = 100) -> pd.DataFrame:
     """Crée un DataFrame minimal valide pour tester le pipeline sans I/O."""
     import numpy as np
+
     rng = np.random.default_rng(42)
-    df = pd.DataFrame({
-        "Lower_Right_Abd_Pain":           rng.choice(["yes", "no"], n),
-        "Migratory_Pain":                 rng.choice(["yes", "no"], n),
-        "Body_Temperature":               rng.uniform(36, 40, n),
-        "WBC_Count":                      rng.uniform(3, 25, n),
-        "CRP":                            rng.uniform(0, 200, n),
-        "Neutrophil_Percentage":          rng.uniform(30, 90, n),
-        "Ipsilateral_Rebound_Tenderness": rng.choice(["yes", "no"], n),
-        "Appendix_Diameter":              rng.uniform(4, 15, n),
-        "Nausea":                         rng.choice(["yes", "no"], n),
-        "Age":                            rng.uniform(1, 18, n),
-        "Diagnosis":                      rng.choice([0, 1], n),
-        "ColonneInutile":                 rng.integers(0, 10, n),  # à filtrer
-    })
+    df = pd.DataFrame(
+        {
+            "Lower_Right_Abd_Pain": rng.choice(["yes", "no"], n),
+            "Migratory_Pain": rng.choice(["yes", "no"], n),
+            "Body_Temperature": rng.uniform(36, 40, n),
+            "WBC_Count": rng.uniform(3, 25, n),
+            "CRP": rng.uniform(0, 200, n),
+            "Neutrophil_Percentage": rng.uniform(30, 90, n),
+            "Ipsilateral_Rebound_Tenderness": rng.choice(["yes", "no"], n),
+            "Appendix_Diameter": rng.uniform(4, 15, n),
+            "Nausea": rng.choice(["yes", "no"], n),
+            "Age": rng.uniform(1, 18, n),
+            "Diagnosis": rng.choice([0, 1], n),
+            "ColonneInutile": rng.integers(0, 10, n),  # à filtrer
+        }
+    )
     return df
 
 
 # ---------------------------------------------------------------------------
 # Tests unitaires — 1 test = 1 fonction = 1 assertion
 # ---------------------------------------------------------------------------
+
 
 def test_load_raw_data_non_empty():
     """load_raw_data → le DataFrame chargé contient au moins une ligne."""
@@ -96,15 +98,18 @@ def test_encode_binary_columns_values_are_0_or_1():
 
 def test_encode_binary_columns_yes_maps_to_1():
     """encode_binary_columns → 'yes' est toujours encodé en 1."""
-    df = pd.DataFrame({col: ["yes"] for col in BINARY_COLS} | {
-        "Body_Temperature": [37.0],
-        "WBC_Count": [10.0],
-        "CRP": [5.0],
-        "Neutrophil_Percentage": [60.0],
-        "Appendix_Diameter": [7.0],
-        "Age": [10.0],
-        "Diagnosis": [1],
-    })
+    df = pd.DataFrame(
+        {col: ["yes"] for col in BINARY_COLS}
+        | {
+            "Body_Temperature": [37.0],
+            "WBC_Count": [10.0],
+            "CRP": [5.0],
+            "Neutrophil_Percentage": [60.0],
+            "Appendix_Diameter": [7.0],
+            "Age": [10.0],
+            "Diagnosis": [1],
+        }
+    )
     result = encode_binary_columns(df)
     assert result[BINARY_COLS[0]].iloc[0] == 1
 
@@ -155,5 +160,3 @@ def test_run_pipeline_produces_output_file():
     with tempfile.TemporaryDirectory() as tmpdir:
         out = run_pipeline(RAW_PATH, tmpdir)
         assert out.exists()
-
-

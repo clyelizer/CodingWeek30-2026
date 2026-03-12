@@ -20,11 +20,11 @@ from __future__ import annotations
 
 import io
 import base64
-from typing import Any
 
 import numpy as np
 import pandas as pd
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from sklearn.pipeline import Pipeline
@@ -33,6 +33,7 @@ from sklearn.pipeline import Pipeline
 # ---------------------------------------------------------------------------
 # 1. Prédiction
 # ---------------------------------------------------------------------------
+
 
 def predict_proba_safe(pipeline: Pipeline, X: pd.DataFrame) -> float:
     """
@@ -57,6 +58,7 @@ def predict_proba_safe(pipeline: Pipeline, X: pd.DataFrame) -> float:
 # ---------------------------------------------------------------------------
 # 2. Valeurs SHAP
 # ---------------------------------------------------------------------------
+
 
 def compute_shap_values(
     pipeline: Pipeline,
@@ -118,6 +120,7 @@ def compute_shap_values(
 # 3. Graphique SHAP waterfall encodé base64
 # ---------------------------------------------------------------------------
 
+
 def make_shap_waterfall_b64(
     shap_values: np.ndarray,
     base_value: float,
@@ -165,6 +168,7 @@ def make_shap_waterfall_b64(
 # 4. Récapitulatif des métriques
 # ---------------------------------------------------------------------------
 
+
 def build_results_summary(
     results: dict[str, dict[str, float]],
     best_name: str,
@@ -185,13 +189,19 @@ def build_results_summary(
     """
     rows = []
     for name, metrics in results.items():
-        rows.append({
-            "model":    name,
-            "roc_auc":  round(metrics["roc_auc"], 4),
-            "f1":       round(metrics["f1"], 4),
-            "accuracy": round(metrics["accuracy"], 4),
-            "best":     name == best_name,
-        })
-    df = pd.DataFrame(rows).sort_values("roc_auc", ascending=False).reset_index(drop=True)
+        rows.append(
+            {
+                "model": name,
+                "roc_auc": round(metrics["roc_auc"], 4),
+                "f1": round(metrics["f1"], 4),
+                "accuracy": round(metrics["accuracy"], 4),
+                "best": name == best_name,
+            }
+        )
+    df = (
+        pd.DataFrame(rows)
+        .sort_values("roc_auc", ascending=False)
+        .reset_index(drop=True)
+    )
     assert len(df) == len(results), "Nombre de lignes incorrect dans le récapitulatif"
     return df

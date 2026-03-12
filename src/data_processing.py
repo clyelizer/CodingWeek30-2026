@@ -66,6 +66,7 @@ BINARY_COLS: list[str] = [
 # Fonctions du pipeline
 # ---------------------------------------------------------------------------
 
+
 def load_raw_data(path: str | pathlib.Path) -> pd.DataFrame:
     """
     Charge le fichier Excel brut et retourne un DataFrame.
@@ -216,6 +217,7 @@ def save_processed_data(
 # Pipeline complet
 # ---------------------------------------------------------------------------
 
+
 def run_pipeline(
     raw_path: str | pathlib.Path,
     output_dir: str | pathlib.Path,
@@ -232,12 +234,12 @@ def run_pipeline(
     --------
     pathlib.Path vers le fichier processed_data.joblib produit.
     """
-    df_raw      = load_raw_data(raw_path)
+    df_raw = load_raw_data(raw_path)
     df_selected = select_columns(df_raw)
-    df_encoded  = encode_binary_columns(df_selected)
-    X, y        = split_features_target(df_encoded)
+    df_encoded = encode_binary_columns(df_selected)
+    X, y = split_features_target(df_encoded)
     X_train, X_test, y_train, y_test = split_train_test(X, y)
-    out_path    = save_processed_data(X_train, X_test, y_train, y_test, output_dir)
+    out_path = save_processed_data(X_train, X_test, y_train, y_test, output_dir)
     return out_path
 
 
@@ -247,8 +249,8 @@ def run_pipeline(
 
 if __name__ == "__main__":
     _ROOT = pathlib.Path(__file__).resolve().parent.parent
-    raw   = _ROOT / "data" / "raw" / "data_finale.xlsx"
-    out   = _ROOT / "data" / "processed"
+    raw = _ROOT / "data" / "raw" / "data_finale.xlsx"
+    out = _ROOT / "data" / "processed"
 
     path = run_pipeline(raw, out)
     print(f"Pipeline terminé → {path}")
