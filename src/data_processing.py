@@ -124,7 +124,7 @@ def encode_binary_columns(
     df_encoded = df.copy()
     mapping = {"yes": 1, "no": 0}
     for col in binary_cols:
-        df_encoded.loc[:, col] = df_encoded[col].map(mapping)
+        df_encoded[col] = df_encoded[col].astype(str).map(mapping).astype(int)
         unknown = df_encoded[col].isna().sum()
         assert unknown == 0, (
             f"Colonne '{col}' contient des valeurs inconnues après encodage."
