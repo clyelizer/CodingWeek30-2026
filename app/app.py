@@ -110,7 +110,7 @@ def _encode_form(data: dict) -> pd.DataFrame:
     if "CRP" in row:
         row["CRP_log"] = float(np.log1p(row["CRP"]))
 
-    # --- Catégorielles yes/no
+    # --- Catégorielles yes/no (incluant signes cliniques et bilans urinaires)
     for field in ("Migratory_Pain", "Lower_Right_Abd_Pain",
                   "Ipsilateral_Rebound_Tenderness",
                   "Contralateral_Rebound_Tenderness",
@@ -132,8 +132,13 @@ def _encode_form(data: dict) -> pd.DataFrame:
     if stool in _STOOL_MAP:
         row["Stool"] = _STOOL_MAP[stool]
 
-    # --- Sparse binaires (0/1) — non modifiées par l'utilisateur → déjà à 0
-    # (la plupart de ces colonnes valent 0 par défaut dans le dataset)
+    # --- Sparse binaires exposées dans le formulaire (écho + signes rares)
+    for field in ("Surrounding_Tissue_Reaction", "Appendix_Wall_Layers",
+                  "Appendicolith", "Target_Sign", "Pathological_Lymph_Nodes",
+                  "Bowel_Wall_Thickening", "Meteorism"):
+        val = data.get(field.lower(), "")
+        if val in _YES_NO:
+            row[field] = _YES_NO[val]
 
     # Construire le DataFrame avec uniquement les features du modèle
     X = pd.DataFrame([{col: row.get(col, _defaults.get(col, 0)) for col in _feature_cols}])
@@ -152,22 +157,47 @@ async def read_root(request: Request) -> HTMLResponse:
 @app.post("/predict", response_class=HTMLResponse)
 async def predict(
     request: Request,
+    # --- Démographie
     age: float = Form(default=10.0),
     sex: str = Form(default="male"),
+    weight: str = Form(default=""),
+    height: str = Form(default=""),
     bmi: str = Form(default=""),
+    # --- Signes vitaux
     body_temperature: float = Form(default=37.5),
+    # --- Biologie
     wbc_count: float = Form(default=11.0),
     crp: float = Form(default=10.0),
     hemoglobin: float = Form(default=12.5),
     neutrophil_percentage: float = Form(default=65.0),
-    appendix_diameter: str = Form(default=""),
-    us_performed: str = Form(default="yes"),
-    appendix_on_us: str = Form(default="no"),
+    thrombocyte_count: str = Form(default=""),
+    rbc_count: str = Form(default=""),
+    rdw: str = Form(default=""),
+    segmented_neutrophils: str = Form(default=""),
+    # --- Examen clinique
     migratory_pain: str = Form(default="no"),
     lower_right_abd_pain: str = Form(default="yes"),
     ipsilateral_rebound_tenderness: str = Form(default="no"),
+    contralateral_rebound_tenderness: str = Form(default="no"),
+    coughing_pain: str = Form(default="no"),
+    peritonitis: str = Form(default="no"),
+    psoas_sign: str = Form(default="no"),
     nausea: str = Form(default="no"),
     loss_of_appetite: str = Form(default="no"),
+    neutrophilia: str = Form(default="no"),
+    stool: str = Form(default="normal"),
+    # --- Échographie
+    appendix_diameter: str = Form(default=""),
+    us_performed: str = Form(default="yes"),
+    appendix_on_us: str = Form(default="no"),
+    free_fluids: str = Form(default="no"),
+    surrounding_tissue_reaction: str = Form(default="no"),
+    appendix_wall_layers: str = Form(default="no"),
+    appendicolith: str = Form(default="no"),
+    # --- Urines
+    rbc_in_urine: str = Form(default="no"),
+    ketones_in_urine: str = Form(default="no"),
+    wbc_in_urine: str = Form(default="no"),
 ) -> HTMLResponse:
     """
     Route de prédiction.
@@ -177,22 +207,34 @@ async def predict(
       - Un graphique SHAP waterfall expliquant la prédiction
     """
     form_data = {
-        "age": age,
-        "sex": sex,
-        "bmi": bmi,
+        # Démographie
+        "age": age, "sex": sex, "weight": weight,
+        "height": height, "bmi": bmi,
+        # Signes vitaux
         "body_temperature": body_temperature,
-        "wbc_count": wbc_count,
-        "crp": crp,
-        "hemoglobin": hemoglobin,
-        "neutrophil_percentage": neutrophil_percentage,
-        "appendix_diameter": appendix_diameter,
-        "us_performed": us_performed,
-        "appendix_on_us": appendix_on_us,
+        # Biologie
+        "wbc_count": wbc_count, "crp": crp,
+        "hemoglobin": hemoglobin, "neutrophil_percentage": neutrophil_percentage,
+        "thrombocyte_count": thrombocyte_count, "rbc_count": rbc_count,
+        "rdw": rdw, "segmented_neutrophils": segmented_neutrophils,
+        # Examen clinique
         "migratory_pain": migratory_pain,
         "lower_right_abd_pain": lower_right_abd_pain,
         "ipsilateral_rebound_tenderness": ipsilateral_rebound_tenderness,
-        "nausea": nausea,
-        "loss_of_appetite": loss_of_appetite,
+        "contralateral_rebound_tenderness": contralateral_rebound_tenderness,
+        "coughing_pain": coughing_pain, "peritonitis": peritonitis,
+        "psoas_sign": psoas_sign, "nausea": nausea,
+        "loss_of_appetite": loss_of_appetite, "neutrophilia": neutrophilia,
+        "stool": stool,
+        # Échographie
+        "appendix_diameter": appendix_diameter, "us_performed": us_performed,
+        "appendix_on_us": appendix_on_us, "free_fluids": free_fluids,
+        "surrounding_tissue_reaction": surrounding_tissue_reaction,
+        "appendix_wall_layers": appendix_wall_layers,
+        "appendicolith": appendicolith,
+        # Urines
+        "rbc_in_urine": rbc_in_urine, "ketones_in_urine": ketones_in_urine,
+        "wbc_in_urine": wbc_in_urine,
     }
 
     X = _encode_form(form_data)

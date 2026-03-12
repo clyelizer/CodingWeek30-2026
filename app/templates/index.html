@@ -41,20 +41,28 @@
                 <!-- Section 1: Démographie -->
                 <div class="section-title">Démographie</div>
                 <div class="row g-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Âge (ans) <span class="badge-required">*</span></label>
                         <input type="number" name="age" class="form-control" min="1" max="18" step="0.5" value="10" required>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Sexe <span class="badge-required">*</span></label>
                         <select name="sex" class="form-select">
                             <option value="male">Masculin</option>
                             <option value="female">Féminin</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
+                        <label class="form-label">Poids (kg)</label>
+                        <input type="number" name="weight" class="form-control" min="5" max="150" step="0.1" placeholder="ex: 35">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Taille (cm)</label>
+                        <input type="number" name="height" class="form-control" min="50" max="200" step="0.5" placeholder="ex: 145">
+                    </div>
+                    <div class="col-md-2">
                         <label class="form-label">IMC (kg/m²)</label>
-                        <input type="number" name="bmi" class="form-control" min="10" max="40" step="0.1" placeholder="ex: 18.5">
+                        <input type="number" name="bmi" class="form-control" min="10" max="40" step="0.1" placeholder="auto">
                     </div>
                 </div>
 
@@ -80,11 +88,27 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Hémoglobine (g/dL)</label>
-                        <input type="number" name="hemoglobin" class="form-control" min="6" max="20" step="0.1" value="12.5">
+                        <input type="number" name="hemoglobin" class="form-control" min="6" max="20" step="0.1" placeholder="ex: 12.5">
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label">Neutrophiles (%)</label>
-                        <input type="number" name="neutrophil_percentage" class="form-control" min="0" max="100" step="0.1" value="65.0">
+                        <input type="number" name="neutrophil_percentage" class="form-control" min="0" max="100" step="0.1" placeholder="ex: 65">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Plaquettes ×10⁹/L</label>
+                        <input type="number" name="thrombocyte_count" class="form-control" min="50" max="800" step="1" placeholder="ex: 280">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">GR / RBC (×10¹²/L)</label>
+                        <input type="number" name="rbc_count" class="form-control" min="2" max="7" step="0.01" placeholder="ex: 4.5">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">RDW (%)</label>
+                        <input type="number" name="rdw" class="form-control" min="10" max="20" step="0.1" placeholder="ex: 13.5">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Neutrophiles segmentés (×10⁹/L)</label>
+                        <input type="number" name="segmented_neutrophils" class="form-control" min="0" max="20" step="0.1" placeholder="ex: 7.2">
                     </div>
                 </div>
 
@@ -113,6 +137,34 @@
                         </select>
                     </div>
                     <div class="col-md-4">
+                        <label class="form-label">Rebond contralatéral</label>
+                        <select name="contralateral_rebound_tenderness" class="form-select">
+                            <option value="no">Non</option>
+                            <option value="yes">Oui</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Douleur à la toux</label>
+                        <select name="coughing_pain" class="form-select">
+                            <option value="no">Non</option>
+                            <option value="yes">Oui</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Péritonite <span class="badge-required">⚠</span></label>
+                        <select name="peritonitis" class="form-select">
+                            <option value="no">Non</option>
+                            <option value="yes">Oui</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Signe du Psoàs</label>
+                        <select name="psoas_sign" class="form-select">
+                            <option value="no">Non</option>
+                            <option value="yes">Oui</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label">Nausées</label>
                         <select name="nausea" class="form-select">
                             <option value="no">Non</option>
@@ -124,6 +176,22 @@
                         <select name="loss_of_appetite" class="form-select">
                             <option value="no">Non</option>
                             <option value="yes">Oui</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Neutrophilie</label>
+                        <select name="neutrophilia" class="form-select">
+                            <option value="no">Non</option>
+                            <option value="yes">Oui</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Transit / Selles</label>
+                        <select name="stool" class="form-select">
+                            <option value="normal" selected>Normal</option>
+                            <option value="constipation">Constipation</option>
+                            <option value="diarrhea">Diarrhée</option>
+                            <option value="mucous_stool">Selles glairesuses</option>
                         </select>
                     </div>
                 </div>
@@ -148,6 +216,60 @@
                     <div class="col-md-4">
                         <label class="form-label">Diamètre appendice (mm)</label>
                         <input type="number" name="appendix_diameter" class="form-control" min="0" max="30" step="0.1" placeholder="ex: 7.5">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Épanchement libre</label>
+                        <select name="free_fluids" class="form-select">
+                            <option value="no">Non</option>
+                            <option value="yes">Oui</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Réaction péri-appendiculaire <span class="badge-required">⚠</span></label>
+                        <select name="surrounding_tissue_reaction" class="form-select">
+                            <option value="no">Non</option>
+                            <option value="yes">Oui</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Paroi appendicu. épaissie</label>
+                        <select name="appendix_wall_layers" class="form-select">
+                            <option value="no">Non</option>
+                            <option value="yes">Oui</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Appendicolithe</label>
+                        <select name="appendicolith" class="form-select">
+                            <option value="no">Non</option>
+                            <option value="yes">Oui</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Section 6: Analyse urinaire -->
+                <div class="section-title">Analyse urinaire</div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Hématies dans urines</label>
+                        <select name="rbc_in_urine" class="form-select">
+                            <option value="no">Non</option>
+                            <option value="yes">Oui</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Cétones dans urines</label>
+                        <select name="ketones_in_urine" class="form-select">
+                            <option value="no">Non</option>
+                            <option value="yes">Oui</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">GB dans urines</label>
+                        <select name="wbc_in_urine" class="form-select">
+                            <option value="no">Non</option>
+                            <option value="yes">Oui</option>
+                        </select>
                     </div>
                 </div>
 
