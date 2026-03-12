@@ -1,332 +1,254 @@
 """
 src/data_processing.py
-Paradigme fonctionnel : une fonction = une tâche précise et testable.
-Aucun effet de bord global — chaque fonction retourne un nouveau DataFrame.
+======================
+Pipeline de préparation des données — diagnostic pédiatrique de l'appendicite.
+
+Paradigme fonctionnel strict :
+  - Une fonction = une tâche précise et testable.
+  - Aucun effet de bord global : chaque fonction prend un DataFrame en entrée
+    et retourne un nouveau DataFrame (pas de mutation en place).
+  - Chaque fonction est couverte par exactement un test unitaire avec une
+    assertion précise.
+
+Étapes du pipeline :
+  1. load_raw_data          → charge le fichier Excel brut
+  2. select_columns         → conserve uniquement les features + la cible
+  3. encode_binary_columns  → encode yes/no → 1/0
+  4. split_features_target  → sépare X et y
+  5. split_train_test       → split stratifié 80/20
+  6. save_processed_data    → exporte les fichiers .joblib dans data/processed/
+
+Décision de conception :
+  Le scaling (StandardScaler) n'est PAS appliqué ici. Il sera encapsulé dans
+  un sklearn Pipeline propre à chaque modèle dans train_model.py, ce qui
+  évite toute fuite de données (data leakage) entre train et test.
 """
 
 from __future__ import annotations
 
 import pathlib
-import numpy as np
+from typing import Tuple
+
+import joblib
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 
 # ---------------------------------------------------------------------------
-# Constantes — déclaration centrale, partagée avec les tests et le pipeline
+# Constantes du projet
 # ---------------------------------------------------------------------------
 
-NUMERIC_IMPUTE_COLS: list[str] = [
-    "Appendix_Diameter", "Neutrophil_Percentage", "BMI", "Height", "RDW",
-    "Hemoglobin", "Thrombocyte_Count", "RBC_Count", "CRP",
-    "Body_Temperature", "WBC_Count", "Weight", "Age",
-    "Segmented_Neutrophils",
-    # Colonnes leakage exclues intentionnellement :
-    # Alvarado_Score, Paedriatic_Appendicitis_Score, Length_of_Stay, US_Number
-]
-
-CATEGORICAL_IMPUTE_COLS: list[str] = [
-    "RBC_in_Urine", "Ketones_in_Urine", "WBC_in_Urine",
-    "Ipsilateral_Rebound_Tenderness", "Sex", "Diagnosis", "Neutrophilia",
-    "Migratory_Pain", "Lower_Right_Abd_Pain", "Contralateral_Rebound_Tenderness",
-    "Coughing_Pain", "Nausea", "Loss_of_Appetite", "Dysuria", "Stool",
-    "Peritonitis", "Psoas_Sign", "Appendix_on_US", "US_Performed",
-    "Free_Fluids", "Diagnosis_Presumptive",
-    "Management", "Severity",  # leakage mais imputées pour garantir 0 NA
-]
-
-SPARSE_BINARY_COLS: list[str] = [
-    "Abscess_Location", "Gynecological_Findings", "Conglomerate_of_Bowel_Loops",
-    "Ileus", "Perfusion", "Enteritis", "Appendicolith", "Coprostasis",
-    "Perforation", "Appendicular_Abscess", "Bowel_Wall_Thickening",
-    "Lymph_Nodes_Location", "Target_Sign", "Meteorism",
-    "Pathological_Lymph_Nodes", "Appendix_Wall_Layers",
-    "Surrounding_Tissue_Reaction",
-]
-
-WINSORIZE_COLS: list[str] = [
-    "BMI", "WBC_Count", "Thrombocyte_Count", "Appendix_Diameter",
-    # Length_of_Stay retirée : colonne leakage post-diagnostique
-]
-
-# Colonnes exclues du modèle ML (post-diagnostiques / data leakage)
-LEAKAGE_COLS: list[str] = [
-    "Diagnosis_Presumptive", "Severity", "Management",
-    "Length_of_Stay", "Alvarado_Score", "Paedriatic_Appendicitis_Score",
-    "Perforation", "Appendicular_Abscess",
-    "CRP",          # redondant avec CRP_log
-    "US_Number",    # identifiant technique
+FEATURE_COLS: list[str] = [
+    "Lower_Right_Abd_Pain",
+    "Migratory_Pain",
+    "Body_Temperature",
+    "WBC_Count",
+    "CRP",
+    "Neutrophil_Percentage",
+    "Ipsilateral_Rebound_Tenderness",
+    "Appendix_Diameter",
+    "Nausea",
+    "Age",
 ]
 
 TARGET_COL: str = "Diagnosis"
 
+# Colonnes avec des valeurs textuelles "yes"/"no" à encoder en 1/0
+BINARY_COLS: list[str] = [
+    "Lower_Right_Abd_Pain",
+    "Migratory_Pain",
+    "Ipsilateral_Rebound_Tenderness",
+    "Nausea",
+]
+
 
 # ---------------------------------------------------------------------------
-# 1. Chargement
+# Fonctions du pipeline
 # ---------------------------------------------------------------------------
 
 def load_raw_data(path: str | pathlib.Path) -> pd.DataFrame:
-    """Charge le fichier Excel brut et retourne un DataFrame non modifié."""
-    return pd.read_excel(path, engine="openpyxl")
-
-
-def load_processed_data(path: str | pathlib.Path) -> pd.DataFrame:
-    """Charge le dataset traité (app_data_final.xlsx)."""
-    return pd.read_excel(path, engine="openpyxl")
-
-
-# ---------------------------------------------------------------------------
-# 2. Imputation
-# ---------------------------------------------------------------------------
-
-def impute_numeric(
-    df: pd.DataFrame,
-    columns: list[str],
-    strategy: str = "median",
-) -> pd.DataFrame:
     """
-    Impute les valeurs manquantes des colonnes numériques.
+    Charge le fichier Excel brut et retourne un DataFrame.
 
-    Parameters
-    ----------
-    df : DataFrame source (non modifié)
-    columns : colonnes à imputer
-    strategy : 'median' (défaut) ou 'mean'
+    Paramètre
+    ---------
+    path : chemin vers le fichier .xlsx
 
-    Returns
-    -------
-    Nouveau DataFrame avec colonnes imputées.
+    Retourne
+    --------
+    pd.DataFrame brut, sans aucune transformation.
+
+    Assertion testée : le DataFrame chargé est non vide.
     """
-    fill_values = {}
-    for col in columns:
-        if col not in df.columns:
-            continue
-        fill_values[col] = df[col].median() if strategy == "median" else df[col].mean()
-    return df.assign(**{col: df[col].fillna(val) for col, val in fill_values.items()})
-
-
-def impute_categorical(
-    df: pd.DataFrame,
-    columns: list[str],
-) -> pd.DataFrame:
-    """
-    Impute les valeurs manquantes des colonnes catégorielles par la mode.
-
-    Returns
-    -------
-    Nouveau DataFrame avec colonnes imputées.
-    """
-    modes = {}
-    for col in columns:
-        if col not in df.columns:
-            continue
-        mode_val = df[col].mode()
-        if len(mode_val) > 0:
-            modes[col] = mode_val[0]
-    return df.assign(**{col: df[col].fillna(val) for col, val in modes.items()})
-
-
-# ---------------------------------------------------------------------------
-# 3. Encodage des colonnes éparses (≥75% NA) en présence/absence
-# ---------------------------------------------------------------------------
-
-def encode_sparse_binary(
-    df: pd.DataFrame,
-    columns: list[str],
-) -> pd.DataFrame:
-    """
-    Convertit les colonnes à très forte proportion de NA en indicateur binaire.
-    1 = valeur présente dans le dataset original, 0 = manquant (examen non réalisé).
-
-    Returns
-    -------
-    Nouveau DataFrame avec colonnes encodées en int8.
-    """
-    updates = {col: df[col].notna().astype(np.int8) for col in columns if col in df.columns}
-    return df.assign(**updates)
-
-
-# ---------------------------------------------------------------------------
-# 4. Nettoyage des valeurs biologiquement impossibles
-# ---------------------------------------------------------------------------
-
-def remove_biological_impossibles(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Supprime les lignes contenant des valeurs physiologiquement impossibles.
-
-    Règles cliniques appliquées :
-      - Body_Temperature ≤ 34 °C   : hypothermie incompatible avec le contexte
-      - Hemoglobin > 20 g/dL        : impossible chez l'enfant
-      - RDW > 30 %                  : artefact de mesure
-      - RBC_Count > 8 T/L           : impossible chez l'enfant
-
-    Returns
-    -------
-    Nouveau DataFrame filtré.
-    """
-    result = df.copy()
-    if "Body_Temperature" in result.columns:
-        result = result[result["Body_Temperature"] > 34]
-    if "Hemoglobin" in result.columns:
-        result = result[result["Hemoglobin"] <= 20]
-    if "RDW" in result.columns:
-        result = result[result["RDW"] <= 30]
-    if "RBC_Count" in result.columns:
-        result = result[result["RBC_Count"] <= 8]
-    return result.reset_index(drop=True)
-
-
-# ---------------------------------------------------------------------------
-# 5. Winsorisation par IQR
-# ---------------------------------------------------------------------------
-
-def winsorize_iqr(
-    df: pd.DataFrame,
-    columns: list[str],
-    factor: float = 1.5,
-) -> pd.DataFrame:
-    """
-    Plafonne les valeurs extrêmes à [Q1 - factor·IQR, Q3 + factor·IQR].
-
-    Parameters
-    ----------
-    columns : colonnes à winsoriser
-    factor  : multiplicateur IQR (défaut 1.5)
-
-    Returns
-    -------
-    Nouveau DataFrame avec colonnes winsoriées.
-    """
-    clips = {}
-    for col in columns:
-        if col not in df.columns:
-            continue
-        Q1 = df[col].quantile(0.25)
-        Q3 = df[col].quantile(0.75)
-        IQR = Q3 - Q1
-        clips[col] = df[col].clip(lower=Q1 - factor * IQR, upper=Q3 + factor * IQR)
-    return df.assign(**clips)
-
-
-# ---------------------------------------------------------------------------
-# 6. Feature engineering
-# ---------------------------------------------------------------------------
-
-def add_log_transform(
-    df: pd.DataFrame,
-    column: str,
-    new_col: str | None = None,
-) -> pd.DataFrame:
-    """
-    Ajoute log1p(column) comme nouvelle colonne.
-
-    Parameters
-    ----------
-    column  : colonne source (ex. 'CRP')
-    new_col : nom de la colonne créée (défaut : column + '_log')
-
-    Returns
-    -------
-    Nouveau DataFrame avec la colonne ajoutée.
-    """
-    target_name = new_col or f"{column}_log"
-    return df.assign(**{target_name: np.log1p(df[column])})
-
-
-# ---------------------------------------------------------------------------
-# 7. Optimisation mémoire
-# ---------------------------------------------------------------------------
-
-def optimize_memory(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Réduit l'empreinte mémoire par downcast systématique des types.
-
-    Stratégie :
-      - int64/int32 → int8 / int16 / int32 selon la plage de valeurs
-      - float64     → float32
-      - object (cardinalité < 50%) → category
-
-    Returns
-    -------
-    Nouveau DataFrame avec types optimisés (copie).
-    """
-    result = df.copy()
-    conversions: dict[str, type] = {}
-    for col in result.columns:
-        dtype = result[col].dtype
-        if dtype in (np.dtype("int64"), np.dtype("int32")):
-            c_min, c_max = result[col].min(), result[col].max()
-            if c_min >= np.iinfo(np.int8).min and c_max <= np.iinfo(np.int8).max:
-                conversions[col] = np.int8
-            elif c_min >= np.iinfo(np.int16).min and c_max <= np.iinfo(np.int16).max:
-                conversions[col] = np.int16
-            else:
-                conversions[col] = np.int32
-        elif dtype == np.dtype("float64"):
-            conversions[col] = np.float32
-        elif dtype == np.dtype("object"):
-            if result[col].nunique() / max(len(result), 1) < 0.5:
-                conversions[col] = "category"
-    return result.astype(conversions)
-
-
-# ---------------------------------------------------------------------------
-# 8. Sélection des features (sans leakage)
-# ---------------------------------------------------------------------------
-
-def get_feature_columns(df: pd.DataFrame) -> list[str]:
-    """
-    Retourne la liste des colonnes utilisables comme features ML.
-    Exclut la cible, les colonnes post-diagnostiques et les identifiants.
-
-    Returns
-    -------
-    Liste de noms de colonnes.
-    """
-    exclude = set(LEAKAGE_COLS) | {TARGET_COL}
-    return [c for c in df.columns if c not in exclude]
-
-
-def get_target_column() -> str:
-    """Retourne le nom de la variable cible."""
-    return TARGET_COL
-
-
-def encode_target(series: pd.Series) -> pd.Series:
-    """
-    Encode la colonne cible en binaire : appendicitis=1, autre=0.
-
-    Returns
-    -------
-    Série int8.
-    """
-    return (series.str.strip() == "appendicitis").astype(np.int8)
-
-
-# ---------------------------------------------------------------------------
-# 9. Pipeline complet (composition des fonctions ci-dessus)
-# ---------------------------------------------------------------------------
-
-def preprocess_pipeline(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Applique séquentiellement toutes les étapes de préprocessing.
-
-    Ordre :
-      1. Imputation numériques (médiane) — avant tout filtrage pour ne pas perdre
-         de lignes à cause de NaN (ex. NaN > 34 retourne False en pandas)
-      2. Imputation catégorielles (mode)
-      3. Suppression valeurs biologiquement impossibles
-      4. Encodage colonnes éparses (binaire)
-      5. Winsorisation IQR
-      6. Log-transformation CRP
-
-    Returns
-    -------
-    DataFrame prêt pour l'entraînement ML.
-    """
-    df = impute_numeric(df, NUMERIC_IMPUTE_COLS)
-    df = impute_categorical(df, CATEGORICAL_IMPUTE_COLS)
-    df = remove_biological_impossibles(df)
-    df = encode_sparse_binary(df, SPARSE_BINARY_COLS)
-    df = winsorize_iqr(df, WINSORIZE_COLS)
-    df = add_log_transform(df, "CRP", new_col="CRP_log")
+    df = pd.read_excel(path)
+    assert len(df) > 0, f"Le fichier {path} est vide."
     return df
+
+
+def select_columns(
+    df: pd.DataFrame,
+    feature_cols: list[str] = FEATURE_COLS,
+    target_col: str = TARGET_COL,
+) -> pd.DataFrame:
+    """
+    Conserve uniquement les colonnes utiles (features + cible) et supprime
+    les lignes avec valeurs manquantes sur ces colonnes.
+
+    Décision : On ne conserve que les colonnes nécessaires dès cette étape
+    pour éviter de transporter des données inutiles dans le pipeline.
+
+    Assertion testée : toutes les colonnes demandées sont présentes dans le
+    DataFrame résultant.
+    """
+    cols = feature_cols + [target_col]
+    missing = [c for c in cols if c not in df.columns]
+    assert len(missing) == 0, f"Colonnes absentes de la DB : {missing}"
+
+    df_selected = df[cols].dropna().reset_index(drop=True)
+    return df_selected
+
+
+def encode_binary_columns(
+    df: pd.DataFrame,
+    binary_cols: list[str] = BINARY_COLS,
+) -> pd.DataFrame:
+    """
+    Encode les colonnes catégorielles binaires "yes"/"no" en 1/0.
+
+    Décision : On utilise un mapping explicite plutôt que LabelEncoder pour
+    garantir que "yes" → 1 et "no" → 0 indépendamment de l'ordre alphabétique.
+
+    Assertion testée : les colonnes encodées ne contiennent que des valeurs
+    dans {0, 1}.
+    """
+    df_encoded = df.copy()
+    mapping = {"yes": 1, "no": 0}
+    for col in binary_cols:
+        df_encoded.loc[:, col] = df_encoded[col].map(mapping)
+        unknown = df_encoded[col].isna().sum()
+        assert unknown == 0, (
+            f"Colonne '{col}' contient des valeurs inconnues après encodage."
+        )
+    return df_encoded
+
+
+def split_features_target(
+    df: pd.DataFrame,
+    feature_cols: list[str] = FEATURE_COLS,
+    target_col: str = TARGET_COL,
+) -> Tuple[pd.DataFrame, pd.Series]:
+    """
+    Sépare le DataFrame en matrice de features X et vecteur cible y.
+
+    Assertion testée : X et y ont le même nombre de lignes.
+    """
+    X = df[feature_cols].copy()
+    y = df[target_col].copy()
+    assert len(X) == len(y), "X et y ont des longueurs différentes."
+    return X, y
+
+
+def split_train_test(
+    X: pd.DataFrame,
+    y: pd.Series,
+    test_size: float = 0.2,
+    random_state: int = 42,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+    """
+    Effectue un split stratifié 80/20 train/test.
+
+    Décision : Le split est stratifié sur y pour préserver la proportion
+    de cas positifs (appendicite) dans les deux ensembles, compte tenu du
+    léger déséquilibre de classes (461 négatifs / 315 positifs).
+
+    Assertion testée : la proportion de positifs dans train et test diffère
+    de moins de 2 points de pourcentage.
+    """
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=random_state, stratify=y
+    )
+    ratio_train = y_train.mean()
+    ratio_test = y_test.mean()
+    assert abs(ratio_train - ratio_test) < 0.02, (
+        f"Split non stratifié : train={ratio_train:.3f}, test={ratio_test:.3f}"
+    )
+    return X_train, X_test, y_train, y_test
+
+
+def save_processed_data(
+    X_train: pd.DataFrame,
+    X_test: pd.DataFrame,
+    y_train: pd.Series,
+    y_test: pd.Series,
+    output_dir: str | pathlib.Path,
+) -> pathlib.Path:
+    """
+    Sauvegarde les données découpées dans un fichier .joblib unique.
+
+    Le fichier contient un dictionnaire avec les clés :
+      X_train, X_test, y_train, y_test, feature_cols
+
+    Assertion testée : le fichier exporté existe bien sur le disque.
+
+    Retourne
+    --------
+    pathlib.Path vers le fichier sauvegardé.
+    """
+    output_dir = pathlib.Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    out_path = output_dir / "processed_data.joblib"
+    joblib.dump(
+        {
+            "X_train": X_train,
+            "X_test": X_test,
+            "y_train": y_train,
+            "y_test": y_test,
+            "feature_cols": list(X_train.columns),
+        },
+        out_path,
+    )
+    assert out_path.exists(), f"Échec de la sauvegarde : {out_path}"
+    return out_path
+
+
+# ---------------------------------------------------------------------------
+# Pipeline complet
+# ---------------------------------------------------------------------------
+
+def run_pipeline(
+    raw_path: str | pathlib.Path,
+    output_dir: str | pathlib.Path,
+) -> pathlib.Path:
+    """
+    Enchaîne toutes les étapes du pipeline de traitement des données.
+
+    Paramètres
+    ----------
+    raw_path   : chemin vers data/raw/data_finale.xlsx
+    output_dir : chemin vers data/processed/
+
+    Retourne
+    --------
+    pathlib.Path vers le fichier processed_data.joblib produit.
+    """
+    df_raw      = load_raw_data(raw_path)
+    df_selected = select_columns(df_raw)
+    df_encoded  = encode_binary_columns(df_selected)
+    X, y        = split_features_target(df_encoded)
+    X_train, X_test, y_train, y_test = split_train_test(X, y)
+    out_path    = save_processed_data(X_train, X_test, y_train, y_test, output_dir)
+    return out_path
+
+
+# ---------------------------------------------------------------------------
+# Exécution directe
+# ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    _ROOT = pathlib.Path(__file__).resolve().parent.parent
+    raw   = _ROOT / "data" / "raw" / "data_finale.xlsx"
+    out   = _ROOT / "data" / "processed"
+
+    path = run_pipeline(raw, out)
+    print(f"Pipeline terminé → {path}")

@@ -197,4 +197,3 @@ def test_load_model_can_predict(trained_rf, xy):
         loaded = load_model(out)
         preds = loaded.predict(X)
         assert len(preds) == len(y)
-

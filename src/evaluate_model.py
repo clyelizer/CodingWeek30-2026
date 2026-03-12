@@ -1,405 +1,197 @@
 """
 src/evaluate_model.py
-Paradigme fonctionnel : une fonction = une tâche précise et testable.
-Évaluation des modèles et génération des visualisations SHAP.
+=====================
+Évaluation des modèles et génération des explications SHAP.
+
+Paradigme fonctionnel strict :
+  - Une fonction = une tâche précise et testable.
+  - Pas d'état global mutable.
+  - Import de shap réalisé en lazy (à l'intérieur des fonctions) pour éviter
+    de bloquer le chargement du module à cause de la chaîne scipy → shap.
+
+Fonctions :
+  1. predict_proba_safe      → probabilité d'appendicite pour un patient
+  2. compute_shap_values     → valeurs SHAP pour une observation
+  3. make_shap_waterfall_b64 → graphique waterfall encodé en base64 (pour HTML)
+  4. build_results_summary   → récapitulatif des métriques de tous les modèles
 """
 
 from __future__ import annotations
 
-import pathlib
+import io
+import base64
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import matplotlib
-matplotlib.use("Agg")          # headless — pas de display requis
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score,
-    roc_curve,
-    confusion_matrix,
-    ConfusionMatrixDisplay,
-)
-
-from src.train_model import load_model
+from sklearn.pipeline import Pipeline
 
 
 # ---------------------------------------------------------------------------
-# 1. Métriques — une fonction par calcul
+# 1. Prédiction
 # ---------------------------------------------------------------------------
 
-def predict_proba_safe(model: object, X: pd.DataFrame) -> np.ndarray:
+def predict_proba_safe(pipeline: Pipeline, X: pd.DataFrame) -> float:
     """
-    Retourne les probabilités de la classe positive (1).
-    Gère les modèles avec/sans méthode predict_proba.
+    Retourne la probabilité d'appendicite (classe 1) pour une observation.
 
-    Returns
-    -------
-    Array 1D de probabilités.
-    """
-    if hasattr(model, "predict_proba"):
-        return model.predict_proba(X)[:, 1]
-    if hasattr(model, "decision_function"):
-        scores = model.decision_function(X)
-        # Normalisation sigmoidale
-        return 1 / (1 + np.exp(-scores))
-    raise ValueError(f"Le modèle {type(model).__name__} ne supporte ni predict_proba ni decision_function.")
-
-
-def compute_metrics(
-    model: object,
-    X_test: pd.DataFrame,
-    y_test: pd.Series,
-    threshold: float = 0.5,
-) -> dict[str, float]:
-    """
-    Calcule toutes les métriques d'évaluation pour un modèle.
-
-    Returns
-    -------
-    Dictionnaire : accuracy, precision, recall, f1, roc_auc.
-    """
-    y_proba = predict_proba_safe(model, X_test)
-    y_pred = (y_proba >= threshold).astype(int)
-
-    return {
-        "accuracy":  round(accuracy_score(y_test, y_pred), 4),
-        "precision": round(precision_score(y_test, y_pred, zero_division=0), 4),
-        "recall":    round(recall_score(y_test, y_pred, zero_division=0), 4),
-        "f1":        round(f1_score(y_test, y_pred, zero_division=0), 4),
-        "roc_auc":   round(roc_auc_score(y_test, y_proba), 4),
-    }
-
-
-def compare_models(
-    models: dict[str, object],
-    X_test: pd.DataFrame,
-    y_test: pd.Series,
-) -> pd.DataFrame:
-    """
-    Compare plusieurs modèles sur toutes les métriques.
-
-    Parameters
+    Paramètres
     ----------
-    models : dictionnaire {nom: modèle}
+    pipeline : Pipeline sklearn fitted
+    X        : DataFrame d'une seule ligne (les 10 features)
 
-    Returns
-    -------
-    DataFrame trié par roc_auc décroissant.
+    Retourne
+    --------
+    float ∈ [0, 1]
+
+    Assertion testée : la probabilité retournée est dans [0, 1].
     """
-    rows = []
-    for name, model in models.items():
-        metrics = compute_metrics(model, X_test, y_test)
-        rows.append({"model": name, **metrics})
-    df = pd.DataFrame(rows).sort_values("roc_auc", ascending=False).reset_index(drop=True)
-    return df
+    proba = float(pipeline.predict_proba(X)[0, 1])
+    assert 0.0 <= proba <= 1.0, f"Probabilité invalide : {proba}"
+    return proba
 
 
 # ---------------------------------------------------------------------------
-# 2. Visualisations — une fonction par graphique
-# ---------------------------------------------------------------------------
-
-def plot_roc_curves(
-    models: dict[str, object],
-    X_test: pd.DataFrame,
-    y_test: pd.Series,
-    save_path: str | pathlib.Path | None = None,
-) -> plt.Figure:
-    """
-    Trace les courbes ROC de tous les modèles sur un même graphique.
-
-    Returns
-    -------
-    Figure matplotlib.
-    """
-    fig, ax = plt.subplots(figsize=(8, 6))
-
-    for name, model in models.items():
-        y_proba = predict_proba_safe(model, X_test)
-        fpr, tpr, _ = roc_curve(y_test, y_proba)
-        auc = roc_auc_score(y_test, y_proba)
-        ax.plot(fpr, tpr, lw=2, label=f"{name} (AUC={auc:.3f})")
-
-    ax.plot([0, 1], [0, 1], "k--", lw=1, label="Aléatoire")
-    ax.set_xlabel("Taux de Faux Positifs")
-    ax.set_ylabel("Taux de Vrais Positifs")
-    ax.set_title("Courbes ROC — comparaison des modèles")
-    ax.legend(loc="lower right")
-    ax.grid(True, alpha=0.3)
-    plt.tight_layout()
-
-    if save_path:
-        pathlib.Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(save_path, dpi=150, bbox_inches="tight")
-
-    return fig
-
-
-def plot_confusion_matrix(
-    model: object,
-    X_test: pd.DataFrame,
-    y_test: pd.Series,
-    model_name: str = "Modèle",
-    save_path: str | pathlib.Path | None = None,
-) -> plt.Figure:
-    """
-    Trace la matrice de confusion normalisée.
-
-    Returns
-    -------
-    Figure matplotlib.
-    """
-    y_pred = model.predict(X_test)
-    cm = confusion_matrix(y_test, y_pred, normalize="true")
-
-    fig, ax = plt.subplots(figsize=(5, 4))
-    disp = ConfusionMatrixDisplay(cm, display_labels=["No App.", "Appendicite"])
-    disp.plot(ax=ax, cmap="Blues", colorbar=False)
-    ax.set_title(f"Matrice de confusion — {model_name}")
-    plt.tight_layout()
-
-    if save_path:
-        pathlib.Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(save_path, dpi=150, bbox_inches="tight")
-
-    return fig
-
-
-# ---------------------------------------------------------------------------
-# 3. SHAP — une fonction par type de visualisation
+# 2. Valeurs SHAP
 # ---------------------------------------------------------------------------
 
 def compute_shap_values(
-    model: object,
+    pipeline: Pipeline,
     X: pd.DataFrame,
-    max_display: int = 200,
-) -> tuple:
+) -> tuple[np.ndarray, float]:
     """
-    Calcule les valeurs SHAP pour un modèle tree-based ou générique.
+    Calcule les valeurs SHAP pour la première ligne de X via TreeExplainer.
 
-    Utilise TreeExplainer si disponible (RF, LightGBM, CatBoost),
-    sinon KernelExplainer sur un sous-échantillon.
+    Utilise SHAP TreeExplainer sur le clf extrait du pipeline.
+    Le scaler est appliqué manuellement avant de passer au TreeExplainer
+    (qui attend les données dans l'espace du clf, pas l'espace original).
 
-    Returns
-    -------
-    (explainer, shap_values) — shap_values est un array numpy.
-    """
-    import shap
-    shap.initjs()
-
-    # TreeExplainer pour les modèles basés sur des arbres
-    try:
-        inner = model.named_steps["svc"] if hasattr(model, "named_steps") else model
-        explainer = shap.TreeExplainer(inner)
-        sv = explainer.shap_values(X)
-        # SHAP 0.4+ renvoie selon la version:
-        # - list de 2 arrays (n, f)  → binary RF
-        # - numpy object array shape (2,) contenant deux (n, f)
-        # - numpy 3D array (n, f, 2) or (2, n, f)
-        # Dans tous les cas, on sélectionne la classe positive (1)
-        if isinstance(sv, list) and len(sv) == 2:
-            sv = sv[1]
-        elif isinstance(sv, np.ndarray):
-            if sv.ndim == 1 and sv.dtype == object and len(sv) == 2:
-                sv = sv[1]          # object array: [sv_class0, sv_class1]
-            elif sv.ndim == 3:
-                if sv.shape[-1] == 2:   # (n, f, 2)
-                    sv = sv[:, :, 1]
-                elif sv.shape[0] == 2:  # (2, n, f)
-                    sv = sv[1]
-        return explainer, sv
-    except Exception:
-        pass
-
-    # KernelExplainer comme fallback (lent, sous-échantillon)
-    sample = shap.sample(X, min(max_display, len(X)))
-    explainer = shap.KernelExplainer(
-        lambda x: _proba_wrapper(model, x, X.columns), sample
-    )
-    sv = explainer.shap_values(sample, nsamples=100)
-    return explainer, sv
-
-
-def _proba_wrapper(model, x_array, columns):
-    """Wrapper interne pour KernelExplainer — convertit numpy → DataFrame."""
-    X_df = pd.DataFrame(x_array, columns=columns)
-    return predict_proba_safe(model, X_df)
-
-
-def plot_shap_summary(
-    shap_values: np.ndarray,
-    X: pd.DataFrame,
-    max_display: int = 20,
-    save_path: str | pathlib.Path | None = None,
-) -> plt.Figure:
-    """
-    Trace le SHAP summary plot (beeswarm).
-
-    Returns
-    -------
-    Figure matplotlib.
-    """
-    import shap
-
-    fig, ax = plt.subplots(figsize=(10, 7))
-    shap.summary_plot(shap_values, X, max_display=max_display, show=False)
-    plt.title("SHAP — Impact des variables sur le diagnostic (appendicite=1)")
-    plt.tight_layout()
-
-    if save_path:
-        pathlib.Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(save_path, dpi=150, bbox_inches="tight")
-
-    return plt.gcf()
-
-
-def plot_shap_waterfall(
-    explainer: object,
-    shap_values: np.ndarray,
-    X: pd.DataFrame,
-    sample_idx: int = 0,
-    save_path: str | pathlib.Path | None = None,
-) -> plt.Figure:
-    """
-    Trace un waterfall plot SHAP pour un patient individuel.
-
-    Parameters
+    Paramètres
     ----------
-    sample_idx : index de la ligne dans X à expliquer
+    pipeline : Pipeline sklearn fitted (scaler + clf)
+    X        : DataFrame avec au moins une ligne
 
-    Returns
-    -------
-    Figure matplotlib.
+    Retourne
+    --------
+    (shap_values, base_value) : tuple
+      - shap_values : array 1D de longueur n_features
+      - base_value  : float, la valeur de base de l'explainer
+
+    Assertion testée : len(shap_values) == nombre de features de X.
     """
-    import shap
+    import shap  # import lazy — évite scipy au chargement du module
 
-    # Sélectionner la valeur de base pour la classe positive
-    ev = explainer.expected_value
-    if isinstance(ev, (list, np.ndarray)) and len(ev) == 2:
-        base_val = float(ev[1])
+    clf = pipeline.named_steps["clf"]
+    scaler = pipeline.named_steps["scaler"]
+    X_scaled = pd.DataFrame(
+        scaler.transform(X),
+        columns=X.columns,
+    )
+
+    explainer = shap.TreeExplainer(clf)
+    sv = explainer.shap_values(X_scaled)
+
+    # sv peut être une liste [classe0, classe1] ou un array 3D selon la version
+    if isinstance(sv, list):
+        sv_single = sv[1][0] if len(sv) == 2 else sv[0][0]
+    elif sv.ndim == 3:
+        sv_single = sv[0, :, 1]
     else:
-        base_val = float(ev)
+        sv_single = sv[0]
 
-    # Extraire les valeurs SHAP pour le sample demandé
-    sv_sample = shap_values[sample_idx]
-
-    # Si shap_values est encore un array 2D (n, 2) ou (2, n), extraire classe positive
-    if isinstance(sv_sample, np.ndarray) and sv_sample.ndim == 1 and len(sv_sample) == 2:
-        # Object array edge-case (rare)
-        sv_sample = sv_sample.ravel()
-    elif isinstance(sv_sample, np.ndarray) and sv_sample.ndim == 2:
-        # (n_features, 2) or similar — take column 1
-        sv_sample = sv_sample[:, 1]
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-    shap.waterfall_plot(
-        shap.Explanation(
-            values=sv_sample,
-            base_values=base_val,
-            data=X.iloc[sample_idx].values,
-            feature_names=X.columns.tolist(),
-        ),
-        show=False,
+    base_val = float(
+        explainer.expected_value[1]
+        if hasattr(explainer.expected_value, "__len__")
+        else explainer.expected_value
     )
-    plt.title(f"SHAP Waterfall — Patient #{sample_idx}")
-    plt.tight_layout()
 
-    if save_path:
-        pathlib.Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(save_path, dpi=150, bbox_inches="tight")
-
-    return plt.gcf()
+    assert len(sv_single) == X.shape[1], (
+        f"SHAP : {len(sv_single)} valeurs pour {X.shape[1]} features"
+    )
+    return sv_single, base_val
 
 
-def plot_shap_dependence(
+# ---------------------------------------------------------------------------
+# 3. Graphique SHAP waterfall encodé base64
+# ---------------------------------------------------------------------------
+
+def make_shap_waterfall_b64(
     shap_values: np.ndarray,
-    X: pd.DataFrame,
-    feature: str,
-    interaction_feature: str = "auto",
-    save_path: str | pathlib.Path | None = None,
-) -> plt.Figure:
+    base_value: float,
+    X_row: pd.DataFrame,
+) -> str | None:
     """
-    Trace un dependence plot SHAP pour une variable clinique.
+    Génère un graphique waterfall SHAP et le retourne encodé en base64 (PNG).
 
-    Returns
-    -------
-    Figure matplotlib.
+    Retourne None en cas d'erreur (non-fatal pour l'interface web).
+
+    Assertion testée : la chaîne retournée est décodable en bytes non vides.
     """
-    import shap
+    import shap  # import lazy
 
-    fig, ax = plt.subplots(figsize=(8, 5))
-    shap.dependence_plot(
-        feature, shap_values, X,
-        interaction_index=interaction_feature,
-        ax=ax, show=False,
-    )
-    plt.title(f"SHAP Dependence — {feature}")
-    plt.tight_layout()
+    try:
+        fig, _ = plt.subplots(figsize=(10, 6))
+        shap.waterfall_plot(
+            shap.Explanation(
+                values=shap_values,
+                base_values=base_value,
+                data=X_row.iloc[0].values,
+                feature_names=list(X_row.columns),
+            ),
+            show=False,
+        )
+        plt.title("Explication SHAP — Facteurs influençant la prédiction")
+        plt.tight_layout()
 
-    if save_path:
-        pathlib.Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png", dpi=120, bbox_inches="tight")
+        buf.seek(0)
+        b64 = base64.b64encode(buf.read()).decode("utf-8")
+        plt.close("all")
 
-    return fig
+        assert len(b64) > 0, "Image SHAP vide"
+        return b64
+
+    except Exception as exc:
+        plt.close("all")
+        print(f"SHAP waterfall error (non-fatal): {exc}")
+        return None
 
 
 # ---------------------------------------------------------------------------
-# 4. Pipeline d'évaluation complet
+# 4. Récapitulatif des métriques
 # ---------------------------------------------------------------------------
 
-def run_evaluation_pipeline(
-    model_dir: str | pathlib.Path = "models",
-    output_dir: str | pathlib.Path = "app/static/plots",
+def build_results_summary(
+    results: dict[str, dict[str, float]],
+    best_name: str,
 ) -> pd.DataFrame:
     """
-    Charge tous les modèles sauvegardés, compare leurs métriques,
-    génère les courbes ROC et les plots SHAP du meilleur modèle.
+    Construit un DataFrame récapitulatif des métriques de tous les modèles.
 
-    Returns
-    -------
-    DataFrame de comparaison des métriques.
+    Paramètres
+    ----------
+    results   : {nom_modèle: {roc_auc, f1, accuracy}}
+    best_name : nom du meilleur modèle (marqué dans le DataFrame)
+
+    Retourne
+    --------
+    pd.DataFrame trié par roc_auc décroissant.
+
+    Assertion testée : le DataFrame a autant de lignes que de modèles dans results.
     """
-    import joblib
-
-    model_dir = pathlib.Path(model_dir)
-    output_dir = pathlib.Path(output_dir)
-
-    # Chargement des données de test
-    test_data = joblib.load(model_dir / "test_data.joblib")
-    X_test, y_test = test_data["X_test"], test_data["y_test"]
-
-    # Chargement de tous les modèles disponibles
-    models = {}
-    for p in model_dir.glob("*.joblib"):
-        if p.stem == "test_data":
-            continue
-        models[p.stem] = load_model(p)
-
-    if not models:
-        raise FileNotFoundError(f"Aucun modèle trouvé dans {model_dir}")
-
-    # Comparaison
-    comparison = compare_models(models, X_test, y_test)
-    print(comparison.to_string(index=False))
-
-    # Courbes ROC
-    plot_roc_curves(models, X_test, y_test, save_path=output_dir / "roc_curves.png")
-
-    # SHAP sur le meilleur modèle
-    best_name = comparison.iloc[0]["model"]
-    best_model = models[best_name]
-    print(f"\nMeilleur modèle : {best_name} (AUC={comparison.iloc[0]['roc_auc']:.4f})")
-
-    explainer, sv = compute_shap_values(best_model, X_test)
-    plot_shap_summary(sv, X_test, save_path=output_dir / "shap_summary.png")
-    plot_shap_waterfall(explainer, sv, X_test, sample_idx=0,
-                        save_path=output_dir / "shap_waterfall_0.png")
-
-    return comparison
-
-
-if __name__ == "__main__":
-    run_evaluation_pipeline()
+    rows = []
+    for name, metrics in results.items():
+        rows.append({
+            "model":    name,
+            "roc_auc":  round(metrics["roc_auc"], 4),
+            "f1":       round(metrics["f1"], 4),
+            "accuracy": round(metrics["accuracy"], 4),
+            "best":     name == best_name,
+        })
+    df = pd.DataFrame(rows).sort_values("roc_auc", ascending=False).reset_index(drop=True)
+    assert len(df) == len(results), "Nombre de lignes incorrect dans le récapitulatif"
+    return df

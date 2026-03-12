@@ -1,293 +1,315 @@
 """
 src/train_model.py
-Paradigme fonctionnel : une fonction = une tâche précise et testable.
-Entraînement et sauvegarde des modèles ML.
+==================
+Pipeline d'entraînement des modèles ML — diagnostic pédiatrique de l'appendicite.
+
+Paradigme fonctionnel strict :
+  - Une fonction = une tâche précise et testable.
+  - Pas d'état global mutable : chaque fonction reçoit ses entrées et retourne
+    ses sorties explicitement.
+  - Chaque fonction est couverte par exactement un test unitaire.
+
+Modèles entraînés :
+  - Logistic Regression  (baseline linéaire interprétable)
+  - Random Forest        (modèle principal, robuste, supporte SHAP)
+  - Gradient Boosting    (XGBoost-like, souvent meilleur sur données tabulaires)
+  - SVM                  (comparaison)
+
+Décision de conception :
+  Chaque modèle est encapsulé dans un sklearn Pipeline avec StandardScaler.
+  Cela évite le data leakage : le scaler est ajusté uniquement sur X_train,
+  jamais sur X_test.
+
+  Le déséquilibre de classes (40.6% positifs) est géré via class_weight='balanced'
+  sur les modèles qui le supportent.
 """
 
 from __future__ import annotations
 
 import pathlib
+from typing import Any
+
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_auc_score, f1_score, classification_report
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import LabelEncoder
-
-from src.data_processing import (
-    load_processed_data,
-    optimize_memory,
-    get_feature_columns,
-    get_target_column,
-    encode_target,
-    LEAKAGE_COLS,
-)
-
-# ---------------------------------------------------------------------------
-# 1. Préparation des données
-# ---------------------------------------------------------------------------
-
-def prepare_features(
-    df: pd.DataFrame,
-    feature_cols: list[str],
-    target_col: str,
-) -> tuple[pd.DataFrame, pd.Series]:
-    """
-    Sépare X (features) et y (cible binaire encodée).
-    Encode les colonnes catégorielles restantes en entiers.
-
-    Returns
-    -------
-    (X, y) où X est numérique et y est int8 (0/1).
-    """
-    X = df[feature_cols].copy()
-    y = encode_target(df[target_col])
-
-    # Encoder les colonnes objet/category restantes
-    cat_cols = X.select_dtypes(include=["object", "category"]).columns.tolist()
-    if cat_cols:
-        encoded = {col: LabelEncoder().fit_transform(X[col].astype(str)) for col in cat_cols}
-        X = X.assign(**encoded)
-
-    return X, y
-
-
-def split_data(
-    X: pd.DataFrame,
-    y: pd.Series,
-    test_size: float = 0.2,
-    random_state: int = 42,
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-    """
-    Divise X et y en ensembles d'entraînement et de test.
-    Stratification pour préserver l'équilibre des classes.
-
-    Returns
-    -------
-    (X_train, X_test, y_train, y_test)
-    """
-    return train_test_split(
-        X, y,
-        test_size=test_size,
-        random_state=random_state,
-        stratify=y,
-    )
 
 
 # ---------------------------------------------------------------------------
-# 2. Entraînement — un modèle par fonction
+# Définitions des modèles candidats
 # ---------------------------------------------------------------------------
 
-def train_random_forest(
-    X_train: pd.DataFrame,
-    y_train: pd.Series,
-    n_estimators: int = 300,
-    max_depth: int | None = None,
-    random_state: int = 42,
-) -> RandomForestClassifier:
+def build_logistic_regression() -> Pipeline:
     """
-    Entraîne un Random Forest avec class_weight='balanced'.
+    Construit un pipeline Logistic Regression avec StandardScaler.
 
-    Choix : robuste aux outliers, pas besoin de normalisation,
-    supporte nativement l'importance des features (SHAP compatible).
+    Décision : LR est le baseline linéaire — rapide, interprétable, AUC fiable.
+    class_weight='balanced' compense le déséquilibre 60/40.
 
-    Returns
-    -------
-    Modèle entraîné.
+    Assertion testée : le pipeline retourné contient bien 2 étapes.
     """
-    model = RandomForestClassifier(
-        n_estimators=n_estimators,
-        max_depth=max_depth,
-        class_weight="balanced",
-        random_state=random_state,
-        n_jobs=-1,
-    )
-    model.fit(X_train, y_train)
-    return model
-
-
-def train_svm(
-    X_train: pd.DataFrame,
-    y_train: pd.Series,
-    C: float = 1.0,
-    kernel: str = "rbf",
-    random_state: int = 42,
-) -> SVC:
-    """
-    Entraîne un SVM avec probabilités activées (nécessaire pour ROC-AUC).
-
-    Returns
-    -------
-    Modèle entraîné.
-    """
-    from sklearn.preprocessing import StandardScaler
-    from sklearn.pipeline import Pipeline
-
-    model = Pipeline([
+    pipeline = Pipeline([
         ("scaler", StandardScaler()),
-        ("svc", SVC(
-            C=C,
-            kernel=kernel,
-            probability=True,
+        ("clf", LogisticRegression(
             class_weight="balanced",
-            random_state=random_state,
+            max_iter=1000,
+            random_state=42,
         )),
     ])
-    model.fit(X_train, y_train)
-    return model
+    assert len(pipeline.steps) == 2
+    return pipeline
 
 
-def train_lightgbm(
+def build_random_forest() -> Pipeline:
+    """
+    Construit un pipeline Random Forest avec StandardScaler.
+
+    Décision : RF est le modèle principal du projet.
+    - Robuste aux outliers
+    - Supporte SHAP TreeExplainer (rapide)
+    - class_weight='balanced' pour le déséquilibre
+
+    Assertion testée : le pipeline retourné contient bien 2 étapes.
+    """
+    pipeline = Pipeline([
+        ("scaler", StandardScaler()),
+        ("clf", RandomForestClassifier(
+            n_estimators=200,
+            class_weight="balanced",
+            random_state=42,
+            n_jobs=-1,
+        )),
+    ])
+    assert len(pipeline.steps) == 2
+    return pipeline
+
+
+def build_gradient_boosting() -> Pipeline:
+    """
+    Construit un pipeline Gradient Boosting avec StandardScaler.
+
+    Décision : GB souvent supérieur à RF sur données tabulaires médicales
+    car il optimise directement la fonction de perte.
+
+    Assertion testée : le pipeline retourné contient bien 2 étapes.
+    """
+    pipeline = Pipeline([
+        ("scaler", StandardScaler()),
+        ("clf", GradientBoostingClassifier(
+            n_estimators=200,
+            learning_rate=0.05,
+            max_depth=4,
+            random_state=42,
+        )),
+    ])
+    assert len(pipeline.steps) == 2
+    return pipeline
+
+
+def build_svm() -> Pipeline:
+    """
+    Construit un pipeline SVM (RBF kernel) avec StandardScaler.
+
+    Décision : SVM inclus comme comparaison — performant sur petits datasets
+    mais moins interprétable (pas de SHAP natif).
+    probability=True requis pour predict_proba et AUC.
+
+    Assertion testée : le pipeline retourné contient bien 2 étapes.
+    """
+    pipeline = Pipeline([
+        ("scaler", StandardScaler()),
+        ("clf", SVC(
+            kernel="rbf",
+            class_weight="balanced",
+            probability=True,
+            random_state=42,
+        )),
+    ])
+    assert len(pipeline.steps) == 2
+    return pipeline
+
+
+# ---------------------------------------------------------------------------
+# Entraînement
+# ---------------------------------------------------------------------------
+
+def train_model(
+    pipeline: Pipeline,
     X_train: pd.DataFrame,
     y_train: pd.Series,
-    n_estimators: int = 300,
-    learning_rate: float = 0.05,
-    random_state: int = 42,
-) -> object:
+) -> Pipeline:
     """
-    Entraîne un LightGBM Classifier.
+    Entraîne un pipeline sklearn sur les données d'entraînement.
 
-    Returns
-    -------
-    Modèle entraîné.
+    Retourne le pipeline fitted.
+
+    Assertion testée : le pipeline fitted peut appeler predict sans lever d'erreur.
     """
-    import lightgbm as lgb
+    pipeline.fit(X_train, y_train)
+    return pipeline
 
-    ratio = (y_train == 0).sum() / max((y_train == 1).sum(), 1)
-    model = lgb.LGBMClassifier(
-        n_estimators=n_estimators,
-        learning_rate=learning_rate,
-        scale_pos_weight=ratio,
-        random_state=random_state,
-        verbose=-1,
-    )
-    model.fit(X_train, y_train)
+
+# ---------------------------------------------------------------------------
+# Évaluation
+# ---------------------------------------------------------------------------
+
+def evaluate_model(
+    pipeline: Pipeline,
+    X_test: pd.DataFrame,
+    y_test: pd.Series,
+) -> dict[str, float]:
+    """
+    Calcule les métriques de performance sur le jeu de test.
+
+    Métriques retournées :
+      - roc_auc  : AUC-ROC (métrique principale — insensible au seuil)
+      - f1       : F1-score (macro) — équilibre précision/rappel
+      - accuracy : taux de bonne classification
+
+    Décision : l'AUC-ROC est la métrique principale car le contexte médical
+    exige de comparer les modèles indépendamment d'un seuil de décision.
+    Le F1 macro est conservé pour tenir compte du déséquilibre de classes.
+
+    Assertion testée : roc_auc ∈ [0, 1].
+    """
+    y_proba = pipeline.predict_proba(X_test)[:, 1]
+    y_pred  = pipeline.predict(X_test)
+
+    metrics = {
+        "roc_auc":  float(roc_auc_score(y_test, y_proba)),
+        "f1":       float(f1_score(y_test, y_pred, average="macro")),
+        "accuracy": float((y_pred == y_test).mean()),
+    }
+    assert 0.0 <= metrics["roc_auc"] <= 1.0, f"AUC invalide : {metrics['roc_auc']}"
+    return metrics
+
+
+def select_best_model(
+    results: dict[str, dict[str, float]],
+) -> str:
+    """
+    Sélectionne le nom du meilleur modèle selon l'AUC-ROC.
+
+    Paramètre
+    ---------
+    results : dict {nom_modèle: {roc_auc: float, ...}}
+
+    Retourne
+    --------
+    str : nom du meilleur modèle.
+
+    Assertion testée : le nom retourné est bien présent dans results.
+    """
+    best = max(results, key=lambda name: results[name]["roc_auc"])
+    assert best in results
+    return best
+
+
+# ---------------------------------------------------------------------------
+# Sauvegarde / chargement
+# ---------------------------------------------------------------------------
+
+def save_model(
+    pipeline: Pipeline,
+    name: str,
+    output_dir: str | pathlib.Path,
+) -> pathlib.Path:
+    """
+    Sauvegarde un pipeline entraîné dans models/<name>.joblib.
+
+    Assertion testée : le fichier existe après sauvegarde.
+    """
+    output_dir = pathlib.Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / f"{name}.joblib"
+    joblib.dump(pipeline, out_path)
+    assert out_path.exists(), f"Échec sauvegarde : {out_path}"
+    return out_path
+
+
+def load_model(path: str | pathlib.Path) -> Pipeline:
+    """
+    Charge un pipeline sklearn depuis un fichier .joblib.
+
+    Assertion testée : l'objet chargé est bien un Pipeline sklearn.
+    """
+    model = joblib.load(path)
+    assert isinstance(model, Pipeline), f"Objet chargé n'est pas un Pipeline : {type(model)}"
     return model
 
 
-def train_catboost(
-    X_train: pd.DataFrame,
-    y_train: pd.Series,
-    iterations: int = 300,
-    learning_rate: float = 0.05,
-    random_state: int = 42,
-) -> object:
-    """
-    Entraîne un CatBoost Classifier.
-
-    Returns
-    -------
-    Modèle entraîné.
-    """
-    from catboost import CatBoostClassifier
-
-    model = CatBoostClassifier(
-        iterations=iterations,
-        learning_rate=learning_rate,
-        random_seed=random_state,
-        verbose=0,
-        auto_class_weights="Balanced",
-    )
-    model.fit(X_train, y_train)
-    return model
-
-
 # ---------------------------------------------------------------------------
-# 3. Sérialisation
+# Pipeline complet d'entraînement
 # ---------------------------------------------------------------------------
 
-def save_model(model: object, path: str | pathlib.Path) -> None:
+def run_training(
+    data_path: str | pathlib.Path,
+    models_dir: str | pathlib.Path,
+) -> dict[str, Any]:
     """
-    Sauvegarde un modèle avec joblib.
+    Entraîne tous les modèles, évalue leurs performances, sauvegarde le meilleur.
 
-    Parameters
-    ----------
-    model : modèle scikit-learn compatible
-    path  : chemin de destination (.joblib)
+    Retourne un dict avec :
+      - "results"    : métriques de tous les modèles
+      - "best_name"  : nom du meilleur modèle
+      - "best_path"  : chemin vers le fichier .joblib du meilleur modèle
     """
-    pathlib.Path(path).parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(model, path)
+    # Chargement des données
+    data = joblib.load(data_path)
+    X_train: pd.DataFrame = data["X_train"]
+    X_test:  pd.DataFrame = data["X_test"]
+    y_train: pd.Series    = data["y_train"]
+    y_test:  pd.Series    = data["y_test"]
 
-
-def load_model(path: str | pathlib.Path) -> object:
-    """
-    Charge un modèle sauvegardé avec joblib.
-
-    Returns
-    -------
-    Modèle désérialisé.
-    """
-    return joblib.load(path)
-
-
-# ---------------------------------------------------------------------------
-# 4. Pipeline d'entraînement complet
-# ---------------------------------------------------------------------------
-
-def run_training_pipeline(
-    processed_data_path: str | pathlib.Path,
-    model_dir: str | pathlib.Path = "models",
-    test_size: float = 0.2,
-    random_state: int = 42,
-) -> dict:
-    """
-    Exécute le pipeline complet :
-      1. Chargement du dataset traité
-      2. Optimisation mémoire
-      3. Préparation features / cible
-      4. Split train/test
-      5. Entraînement des 4 modèles
-      6. Sauvegarde
-
-    Returns
-    -------
-    Dictionnaire {'model_name': model, 'X_test': ..., 'y_test': ...}
-    """
-    df = load_processed_data(processed_data_path)
-    df = optimize_memory(df)
-
-    feature_cols = get_feature_columns(df)
-    target_col = get_target_column()
-
-    X, y = prepare_features(df, feature_cols, target_col)
-    X_train, X_test, y_train, y_test = split_data(X, y, test_size, random_state)
-
-    print(f"Train : {len(X_train)} | Test : {len(X_test)}")
-    print(f"Ratio positif train : {y_train.mean():.2%}")
-
-    trainers = {
-        "random_forest": train_random_forest,
-        "svm":           train_svm,
-        "lightgbm":      train_lightgbm,
-        "catboost":      train_catboost,
+    # Catalogue des modèles à entraîner
+    candidates = {
+        "logistic_regression": build_logistic_regression(),
+        "random_forest":       build_random_forest(),
+        "gradient_boosting":   build_gradient_boosting(),
+        "svm":                 build_svm(),
     }
 
-    models = {}
-    for name, trainer in trainers.items():
-        print(f"Entraînement : {name} ...", end=" ", flush=True)
-        try:
-            model = trainer(X_train, y_train, random_state=random_state)
-            save_model(model, pathlib.Path(model_dir) / f"{name}.joblib")
-            models[name] = model
-            print("OK")
-        except ImportError as e:
-            print(f"⚠ ignoré ({e})")
+    results: dict[str, dict[str, float]] = {}
 
-    # Sauvegarder les données de test pour évaluation
-    joblib.dump({"X_test": X_test, "y_test": y_test, "feature_cols": feature_cols},
-                pathlib.Path(model_dir) / "test_data.joblib")
+    for name, pipeline in candidates.items():
+        print(f"  Entraînement : {name} ...", end=" ", flush=True)
+        fitted = train_model(pipeline, X_train, y_train)
+        metrics = evaluate_model(fitted, X_test, y_test)
+        results[name] = metrics
+        print(f"AUC={metrics['roc_auc']:.4f}  F1={metrics['f1']:.4f}")
+        # Sauvegarder tous les modèles (utile pour l'app)
+        save_model(fitted, name, models_dir)
 
-    return {**models, "X_test": X_test, "y_test": y_test}
+    best_name = select_best_model(results)
+    best_path = pathlib.Path(models_dir) / f"{best_name}.joblib"
 
+    print(f"\n  Meilleur modèle : {best_name}  (AUC={results[best_name]['roc_auc']:.4f})")
+
+    return {
+        "results":   results,
+        "best_name": best_name,
+        "best_path": best_path,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Exécution directe
+# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    import sys
+    _ROOT     = pathlib.Path(__file__).resolve().parent.parent
+    data_path = _ROOT / "data" / "processed" / "processed_data.joblib"
+    models_dir = _ROOT / "models"
 
-    data_path = pathlib.Path("data/processed/app_data_final.xlsx")
-    if not data_path.exists():
-        print(f"Fichier introuvable : {data_path}", file=sys.stderr)
-        sys.exit(1)
+    print("=== Entraînement des modèles ===")
+    summary = run_training(data_path, models_dir)
 
-    results = run_training_pipeline(data_path, model_dir="models")
-    print("\nModèles sauvegardés dans models/")
+    print("\n=== Résultats complets ===")
+    for name, metrics in summary["results"].items():
+        marker = " ← MEILLEUR" if name == summary["best_name"] else ""
+        print(f"  {name:<25} AUC={metrics['roc_auc']:.4f}  F1={metrics['f1']:.4f}  Acc={metrics['accuracy']:.4f}{marker}")

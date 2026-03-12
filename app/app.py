@@ -1,44 +1,52 @@
 """
 app/app.py
+==========
 Application FastAPI — aide au diagnostic pédiatrique de l'appendicite.
-Fournit une interface web pour entrer les paramètres cliniques d'un enfant
+
+Fournit une interface web pour saisir les 10 paramètres cliniques d'un enfant
 et obtenir une probabilité d'appendicite avec explication SHAP.
+
+Features du modèle (10) :
+  Catégorielles (0/1) : Lower_Right_Abd_Pain, Migratory_Pain, Nausea,
+                        Ipsilateral_Rebound_Tenderness
+  Numériques           : Body_Temperature, WBC_Count, CRP,
+                         Neutrophil_Percentage, Appendix_Diameter, Age
+
+Pour lancer :
+  python app.py [--host 0.0.0.0] [--port 8000] [--reload]
+  ou : uvicorn app:app --reload
 """
 
 from __future__ import annotations
 
 import sys
 import pathlib
-import io
-import base64
 
 import joblib
-import numpy as np
 import pandas as pd
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-# --- sys.path robustesse (lancé depuis n'importe quel répertoire)
+# ---------------------------------------------------------------------------
+# sys.path — fonctionne quel que soit le répertoire de lancement
+# ---------------------------------------------------------------------------
 _ROOT = pathlib.Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from src.train_model import load_model
-from src.evaluate_model import compute_shap_values, predict_proba_safe
+from src.evaluate_model import predict_proba_safe, compute_shap_values, make_shap_waterfall_b64
 
 # ---------------------------------------------------------------------------
-# Application
+# Application FastAPI
 # ---------------------------------------------------------------------------
 app = FastAPI(
     title="PediAppendix",
     description="Aide au diagnostic pédiatrique de l'appendicite — Random Forest + SHAP",
-    version="1.0.0",
+    version="2.0.0",
 )
 
 _APP_DIR = pathlib.Path(__file__).resolve().parent
@@ -48,101 +56,80 @@ templates = Jinja2Templates(directory=str(_APP_DIR / "templates"))
 # ---------------------------------------------------------------------------
 # Chargement du modèle au démarrage (singleton)
 # ---------------------------------------------------------------------------
-_MODEL_DIR = _ROOT / "models"
+_MODEL_DIR  = _ROOT / "models"
+_DATA_DIR   = _ROOT / "data" / "processed"
 
-_model = None
+_model         = None
 _feature_cols: list[str] = []
 _defaults: dict[str, float] = {}
 
+# Colonnes binaires du formulaire (encodées yes→1 / no→0)
+_BINARY_COLS = {
+    "lower_right_abd_pain",
+    "migratory_pain",
+    "nausea",
+    "ipsilateral_rebound_tenderness",
+}
+
 
 def _load_resources() -> None:
-    """Charge le modèle RF et les valeurs par défaut des features."""
+    """Charge le modèle RF et les médianes du test set comme valeurs par défaut."""
     global _model, _feature_cols, _defaults
     _model = load_model(_MODEL_DIR / "random_forest.joblib")
-    test_data = joblib.load(_MODEL_DIR / "test_data.joblib")
-    _feature_cols = test_data["feature_cols"]
-    X_test: pd.DataFrame = test_data["X_test"]
-    # Médiane du test set comme valeur par défaut (raisonnable pour la démo)
-    _defaults = X_test.median().to_dict()
+    processed = joblib.load(_DATA_DIR / "processed_data.joblib")
+    _feature_cols = processed["feature_cols"]
+    _defaults = processed["X_test"].median().to_dict()
 
 
-# Chargement synchrone au démarrage
 _load_resources()
 
 
 # ---------------------------------------------------------------------------
-# Encodage des variables catégorielles (doit correspondre au LabelEncoder
-# utilisé lors de l'entraînement — tri alphabétique).
+# Helpers
 # ---------------------------------------------------------------------------
-_YES_NO = {"yes": 1, "no": 0}
-_SEX_MAP = {"female": 0, "male": 1}
-_STOOL_MAP = {"constipation": 0, "diarrhea": 1, "mucous_stool": 2, "normal": 3}
-_RBC_URINE_MAP = {"no": 0, "few": 1, "moderate": 2, "many": 3}
 
-
-def _encode_form(data: dict) -> pd.DataFrame:
+def _build_input_row(form_data: dict) -> pd.DataFrame:
     """
-    Construit un vecteur de features à partir du formulaire HTML.
+    Construit un DataFrame d'une ligne à partir des données brutes du formulaire.
 
-    1. Remplit toutes les features avec les valeurs par défaut du test set.
-    2. Écrase avec les valeurs du formulaire (correctement encodées).
-    3. Ajoute CRP_log depuis CRP si fourni.
+    - Les champs numériques sont castés en float.
+    - Les champs binaires yes/no sont encodés en 1/0.
+    - Les valeurs manquantes sont remplacées par la médiane du test set.
 
-    Returns
-    -------
-    DataFrame à une ligne, colonnes = _feature_cols.
+    Retourne un DataFrame dont les colonnes correspondent exactement à _feature_cols.
     """
-    row = dict(_defaults)  # copie des defaults
+    row: dict[str, float] = dict(_defaults)
 
-    # --- Numériques
-    for field in ("Age", "BMI", "Weight", "Height", "Body_Temperature",
-                  "WBC_Count", "CRP", "Hemoglobin", "Neutrophil_Percentage",
-                  "Appendix_Diameter", "Thrombocyte_Count", "RBC_Count",
-                  "RDW", "Segmented_Neutrophils"):
-        val = data.get(field.lower(), "")
-        if val != "" and val is not None:
-            try:
-                row[field] = float(val)
-            except ValueError:
-                pass  # garde le défaut
+    # Champs numériques
+    for key in ("body_temperature", "wbc_count", "crp",
+                "neutrophil_percentage", "appendix_diameter", "age"):
+        col = key.replace("_", "_").title().replace("_", "_")
+        # Conversion key → nom de colonne (Body_Temperature, WBC_Count, …)
+        col_name = {
+            "body_temperature":     "Body_Temperature",
+            "wbc_count":            "WBC_Count",
+            "crp":                  "CRP",
+            "neutrophil_percentage":"Neutrophil_Percentage",
+            "appendix_diameter":    "Appendix_Diameter",
+            "age":                  "Age",
+        }[key]
+        try:
+            row[col_name] = float(form_data[key])
+        except (ValueError, KeyError):
+            pass  # garde la médiane par défaut
 
-    # --- CRP_log (feature engineerée)
-    if "CRP" in row:
-        row["CRP_log"] = float(np.log1p(row["CRP"]))
+    # Champs binaires yes/no → 1/0
+    binary_map = {
+        "lower_right_abd_pain":           "Lower_Right_Abd_Pain",
+        "migratory_pain":                 "Migratory_Pain",
+        "nausea":                         "Nausea",
+        "ipsilateral_rebound_tenderness": "Ipsilateral_Rebound_Tenderness",
+    }
+    for form_key, col_name in binary_map.items():
+        val = str(form_data.get(form_key, "no")).strip().lower()
+        row[col_name] = 1.0 if val == "yes" else 0.0
 
-    # --- Catégorielles yes/no (incluant signes cliniques et bilans urinaires)
-    for field in ("Migratory_Pain", "Lower_Right_Abd_Pain",
-                  "Ipsilateral_Rebound_Tenderness",
-                  "Contralateral_Rebound_Tenderness",
-                  "Coughing_Pain", "Nausea", "Loss_of_Appetite", "Dysuria",
-                  "Neutrophilia", "Peritonitis", "Psoas_Sign",
-                  "Appendix_on_US", "US_Performed", "Free_Fluids",
-                  "RBC_in_Urine", "Ketones_in_Urine", "WBC_in_Urine"):
-        val = data.get(field.lower(), "")
-        if val in _YES_NO:
-            row[field] = _YES_NO[val]
-
-    # --- Sexe
-    sex = data.get("sex", "")
-    if sex in _SEX_MAP:
-        row["Sex"] = _SEX_MAP[sex]
-
-    # --- Selles
-    stool = data.get("stool", "")
-    if stool in _STOOL_MAP:
-        row["Stool"] = _STOOL_MAP[stool]
-
-    # --- Sparse binaires exposées dans le formulaire (écho + signes rares)
-    for field in ("Surrounding_Tissue_Reaction", "Appendix_Wall_Layers",
-                  "Appendicolith", "Target_Sign", "Pathological_Lymph_Nodes",
-                  "Bowel_Wall_Thickening", "Meteorism"):
-        val = data.get(field.lower(), "")
-        if val in _YES_NO:
-            row[field] = _YES_NO[val]
-
-    # Construire le DataFrame avec uniquement les features du modèle
-    X = pd.DataFrame([{col: row.get(col, _defaults.get(col, 0)) for col in _feature_cols}])
-    return X
+    return pd.DataFrame([{col: row[col] for col in _feature_cols}])
 
 
 # ---------------------------------------------------------------------------
@@ -151,164 +138,91 @@ def _encode_form(data: dict) -> pd.DataFrame:
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("index.html", {"request": request})
+    """Affiche le formulaire de saisie clinique."""
+    return templates.TemplateResponse("index.html", {
+        "request":  request,
+        "defaults": _defaults,
+    })
 
 
 @app.post("/predict", response_class=HTMLResponse)
 async def predict(
-    request: Request,
-    # --- Démographie
-    age: float = Form(default=10.0),
-    sex: str = Form(default="male"),
-    weight: str = Form(default=""),
-    height: str = Form(default=""),
-    bmi: str = Form(default=""),
-    # --- Signes vitaux
-    body_temperature: float = Form(default=37.5),
-    # --- Biologie
-    wbc_count: float = Form(default=11.0),
-    crp: float = Form(default=10.0),
-    hemoglobin: float = Form(default=12.5),
-    neutrophil_percentage: float = Form(default=65.0),
-    thrombocyte_count: str = Form(default=""),
-    rbc_count: str = Form(default=""),
-    rdw: str = Form(default=""),
-    segmented_neutrophils: str = Form(default=""),
-    # --- Examen clinique
-    migratory_pain: str = Form(default="no"),
-    lower_right_abd_pain: str = Form(default="yes"),
-    ipsilateral_rebound_tenderness: str = Form(default="no"),
-    contralateral_rebound_tenderness: str = Form(default="no"),
-    coughing_pain: str = Form(default="no"),
-    peritonitis: str = Form(default="no"),
-    psoas_sign: str = Form(default="no"),
-    nausea: str = Form(default="no"),
-    loss_of_appetite: str = Form(default="no"),
-    neutrophilia: str = Form(default="no"),
-    stool: str = Form(default="normal"),
-    # --- Échographie
-    appendix_diameter: str = Form(default=""),
-    us_performed: str = Form(default="yes"),
-    appendix_on_us: str = Form(default="no"),
-    free_fluids: str = Form(default="no"),
-    surrounding_tissue_reaction: str = Form(default="no"),
-    appendix_wall_layers: str = Form(default="no"),
-    appendicolith: str = Form(default="no"),
-    # --- Urines
-    rbc_in_urine: str = Form(default="no"),
-    ketones_in_urine: str = Form(default="no"),
-    wbc_in_urine: str = Form(default="no"),
+    request:                        Request,
+    age:                            float = Form(...),
+    body_temperature:               float = Form(...),
+    wbc_count:                      float = Form(...),
+    crp:                            float = Form(...),
+    neutrophil_percentage:          float = Form(...),
+    appendix_diameter:              float = Form(...),
+    lower_right_abd_pain:           str   = Form(default="no"),
+    migratory_pain:                 str   = Form(default="no"),
+    nausea:                         str   = Form(default="no"),
+    ipsilateral_rebound_tenderness: str   = Form(default="no"),
 ) -> HTMLResponse:
     """
     Route de prédiction.
-    Accepte les données du formulaire clinique et retourne :
-      - La probabilité d'appendicite
-      - La décision (appendicite / pas d'appendicite)
-      - Un graphique SHAP waterfall expliquant la prédiction
+
+    Reçoit les 10 champs du formulaire, construit le vecteur feature,
+    calcule la probabilité d'appendicite, génère le graphique SHAP
+    et renvoie la page résultat.
     """
     form_data = {
-        # Démographie
-        "age": age, "sex": sex, "weight": weight,
-        "height": height, "bmi": bmi,
-        # Signes vitaux
-        "body_temperature": body_temperature,
-        # Biologie
-        "wbc_count": wbc_count, "crp": crp,
-        "hemoglobin": hemoglobin, "neutrophil_percentage": neutrophil_percentage,
-        "thrombocyte_count": thrombocyte_count, "rbc_count": rbc_count,
-        "rdw": rdw, "segmented_neutrophils": segmented_neutrophils,
-        # Examen clinique
-        "migratory_pain": migratory_pain,
-        "lower_right_abd_pain": lower_right_abd_pain,
+        "age":                            age,
+        "body_temperature":               body_temperature,
+        "wbc_count":                      wbc_count,
+        "crp":                            crp,
+        "neutrophil_percentage":          neutrophil_percentage,
+        "appendix_diameter":              appendix_diameter,
+        "lower_right_abd_pain":           lower_right_abd_pain,
+        "migratory_pain":                 migratory_pain,
+        "nausea":                         nausea,
         "ipsilateral_rebound_tenderness": ipsilateral_rebound_tenderness,
-        "contralateral_rebound_tenderness": contralateral_rebound_tenderness,
-        "coughing_pain": coughing_pain, "peritonitis": peritonitis,
-        "psoas_sign": psoas_sign, "nausea": nausea,
-        "loss_of_appetite": loss_of_appetite, "neutrophilia": neutrophilia,
-        "stool": stool,
-        # Échographie
-        "appendix_diameter": appendix_diameter, "us_performed": us_performed,
-        "appendix_on_us": appendix_on_us, "free_fluids": free_fluids,
-        "surrounding_tissue_reaction": surrounding_tissue_reaction,
-        "appendix_wall_layers": appendix_wall_layers,
-        "appendicolith": appendicolith,
-        # Urines
-        "rbc_in_urine": rbc_in_urine, "ketones_in_urine": ketones_in_urine,
-        "wbc_in_urine": wbc_in_urine,
     }
 
-    X = _encode_form(form_data)
-    prob = float(predict_proba_safe(_model, X)[0])
-    decision = "appendicite" if prob >= 0.5 else "pas d'appendicite"
-    risk_class = "danger" if prob >= 0.5 else "success"
+    X    = _build_input_row(form_data)
+    prob = predict_proba_safe(_model, X)
 
-    # Génération SHAP waterfall en mémoire (base64 pour l'HTML)
+    decision   = "appendicite" if prob >= 0.5 else "pas d'appendicite"
+    risk_class = "danger"      if prob >= 0.5 else "success"
+
+    # Graphique SHAP (non-bloquant en cas d'erreur)
     shap_b64: str | None = None
     try:
-        _, sv = compute_shap_values(_model, X)
-        # SHAP pour un seul patient — extract values correctly
-        if isinstance(sv, list) and len(sv) == 2:
-            sv_vals = sv[1][0]
-            ev = _model.estimators_[0].tree_.threshold  # fallback
-        elif isinstance(sv, np.ndarray) and sv.ndim == 2:
-            sv_vals = sv[0]
-        elif isinstance(sv, np.ndarray) and sv.ndim == 1:
-            sv_vals = sv
-        else:
-            sv_vals = np.array(sv).ravel()
-
-        import shap
-        from src.evaluate_model import compute_shap_values as _csv
-
-        explainer, sv_full = _csv(_model, X)
-
-        # expected_value — extraire la classe positive
-        ev_raw = explainer.expected_value
-        if isinstance(ev_raw, (list, np.ndarray)) and len(ev_raw) == 2:
-            base_val = float(ev_raw[1])
-        else:
-            base_val = float(ev_raw)
-
-        # sv_full peut être (1, n_features) ou (2, 1, n_features) etc.
-        if isinstance(sv_full, np.ndarray):
-            if sv_full.ndim == 2:
-                sv_single = sv_full[0]  # (n_features,)
-            elif sv_full.ndim == 1 and sv_full.dtype == object:
-                sv_single = sv_full[1][0] if len(sv_full) == 2 else sv_full[0]
-            else:
-                sv_single = sv_full.ravel()[:len(_feature_cols)]
-        elif isinstance(sv_full, list):
-            sv_single = sv_full[1][0] if len(sv_full) == 2 else sv_full[0][0]
-        else:
-            sv_single = np.zeros(len(_feature_cols))
-
-        fig, _ = plt.subplots(figsize=(10, 6))
-        shap.waterfall_plot(
-            shap.Explanation(
-                values=sv_single,
-                base_values=base_val,
-                data=X.iloc[0].values,
-                feature_names=_feature_cols,
-            ),
-            show=False,
-        )
-        plt.title("Explication SHAP — Facteurs influençant la prédiction")
-        plt.tight_layout()
-
-        buf = io.BytesIO()
-        plt.savefig(buf, format="png", dpi=120, bbox_inches="tight")
-        buf.seek(0)
-        shap_b64 = base64.b64encode(buf.read()).decode("utf-8")
-        plt.close("all")
+        sv, base_val = compute_shap_values(_model, X)
+        shap_b64 = make_shap_waterfall_b64(sv, base_val, X)
     except Exception as exc:
-        shap_b64 = None
-        print(f"SHAP waterfall error (non-fatal): {exc}")
+        print(f"SHAP error (non-fatal): {exc}")
 
     return templates.TemplateResponse("result.html", {
-        "request": request,
-        "prob": f"{prob * 100:.1f}",
-        "decision": decision,
+        "request":    request,
+        "prob":       f"{prob * 100:.1f}",
+        "decision":   decision,
         "risk_class": risk_class,
-        "shap_b64": shap_b64,
-        "form": form_data,
+        "shap_b64":   shap_b64,
+        "form":       form_data,
     })
+
+
+# ---------------------------------------------------------------------------
+# Lancement direct avec arguments CLI
+# ---------------------------------------------------------------------------
+if __name__ == "__main__":
+    import uvicorn
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="PediAppendix — Aide au diagnostic pédiatrique de l'appendicite"
+    )
+    parser.add_argument("--host",      default="0.0.0.0",  help="Host (défaut: 0.0.0.0)")
+    parser.add_argument("--port",      type=int, default=8000, help="Port (défaut: 8000)")
+    parser.add_argument("--reload",    action="store_true", help="Hot-reload")
+    parser.add_argument("--log-level", default="info",      help="Log level")
+    args = parser.parse_args()
+
+    uvicorn.run(
+        "app:app",
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
+        log_level=args.log_level,
+    )

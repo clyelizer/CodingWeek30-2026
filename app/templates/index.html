@@ -2,283 +2,265 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PediAppendix — Aide au Diagnostic</title>
+    <title>Diagnostic Appendicite - Expert</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <style>
-        body { background-color: #f0f4f8; }
-        .card { border: none; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        .card-header { background: linear-gradient(135deg, #1e3a8a, #2563eb); }
-        .form-label { font-weight: 500; font-size: 0.9rem; color: #374151; }
-        .section-title { color: #1e3a8a; font-size: 0.85rem; font-weight: 700;
-                         text-transform: uppercase; letter-spacing: 0.05em;
-                         border-bottom: 2px solid #dbeafe; padding-bottom: 4px;
-                         margin-bottom: 12px; margin-top: 18px; }
-        .badge-required { color: #dc2626; font-size: 0.75rem; }
+   <style>
+    body {
+        background-image: url('/static/back.jpeg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+
+        .main-card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255,255,255,0.25);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, rgba(26,86,219,0.85) 0%, rgba(30,144,255,0.85) 100%);
+            padding: 24px 32px;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .card-header h4 {
+            font-weight: 600;
+            font-size: 1.2rem;
+            letter-spacing: 0.01em;
+        }
+
+        .card-header p {
+            font-size: 0.82rem;
+            opacity: 0.85;
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 28px 32px;
+            background: transparent;
+        }
+
+        fieldset {
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 18px 20px;
+            margin-bottom: 18px;
+            border-radius: 10px;
+            background: rgb(18 1 1 / 15%);
+
+        }
+
+        legend {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #ffffff;
+            width: auto;
+            padding: 0 10px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+        }
+
+        .form-label {
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: rgba(255,255,255,0.85);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .form-control, .form-select {
+            border: 1px solid rgba(255,255,255,0.35);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            padding: 9px 13px;
+            color: #ffffff;
+            background-color: rgba(255,255,255,0.15);
+            backdrop-filter: blur(4px);
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: rgba(255,255,255,0.7);
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.15);
+            background-color: rgba(255,255,255,0.22);
+            color: #ffffff;
+        }
+
+        .form-control::placeholder { color: rgba(255,255,255,0.5); }
+
+        .form-select option {
+            background: #1a3a6b;
+            color: #ffffff;
+        }
+
+        .input-group-text {
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.35);
+            border-left: none;
+            border-radius: 0 8px 8px 0;
+            color: rgba(255,255,255,0.7);
+            font-size: 0.78rem;
+            font-weight: 500;
+        }
+
+        .input-group .form-control {
+            border-right: none;
+            border-radius: 8px 0 0 8px;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, #1a56db 0%, #1e90ff 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 4px 16px rgba(26,86,219,0.5);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-submit:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 22px rgba(26,86,219,0.6);
+            color: white;
+        }
+
+        .disclaimer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.55);
+            margin-top: 12px;
+            margin-bottom: 0;
+        }
     </style>
 </head>
-<body class="py-4">
-<div class="container" style="max-width: 860px;">
-    <div class="card">
-        <div class="card-header text-white p-4">
-            <div class="d-flex align-items-center gap-3">
-                <img src="/static/ecole.png" alt="Logo" style="height:60px; filter: brightness(0) invert(1);">
-                <div>
-                    <h3 class="mb-0 fw-bold">PediAppendix</h3>
-                    <small class="opacity-75">Aide au diagnostic de l'appendicite pédiatrique — Random Forest + SHAP</small>
+<body class="py-5">
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card main-card">
+
+                <div class="card-header text-white text-center">
+                    <img src="/static/ecole.png" alt="Logo" class="img-fluid mb-3" style="max-height: 52px;">
+                    <h4 class="mb-1">Diagnostic Appendicite</h4>
+                    <p>Système expert d'aide à la décision clinique</p>
+                </div>
+
+                <div class="card-body">
+                    <form action="/predict" method="post">
+
+                        <fieldset>
+                            <legend>1. Patient</legend>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Âge</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.01" name="age" class="form-control" placeholder="10" min="0" max="18" required>
+                                        <span class="input-group-text">ans</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Température corporelle</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.1" name="body_temperature" class="form-control" placeholder="37.2" required>
+                                        <span class="input-group-text">°C</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>2. Examen clinique</legend>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Douleur fosse iliaque droite</label>
+                                    <select name="lower_right_abd_pain" class="form-select">
+                                        <option value="yes">Oui</option>
+                                        <option value="no">Non</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Douleur migratoire</label>
+                                    <select name="migratory_pain" class="form-select">
+                                        <option value="yes">Oui</option>
+                                        <option value="no">Non</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Nausées / vomissements</label>
+                                    <select name="nausea" class="form-select">
+                                        <option value="yes">Oui</option>
+                                        <option value="no">Non</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Rebond homolatéral</label>
+                                    <select name="ipsilateral_rebound_tenderness" class="form-select">
+                                        <option value="yes">Oui</option>
+                                        <option value="no">Non</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>3. Biologie</legend>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Leucocytes (WBC)</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.01" name="wbc_count" class="form-control" placeholder="11.3" required>
+                                        <span class="input-group-text">G/L</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Neutrophiles</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.1" name="neutrophil_percentage" class="form-control" placeholder="75.5" required>
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">CRP</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.1" name="crp" class="form-control" placeholder="7.0" required>
+                                        <span class="input-group-text">mg/L</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>4. Échographie</legend>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Diamètre appendice</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.1" name="appendix_diameter" class="form-control" placeholder="7.5" required>
+                                        <span class="input-group-text">mm</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <button type="submit" class="btn-submit mt-1">Analyser le risque</button>
+                        <p class="disclaimer">Usage médical supervisé — ne remplace pas l'avis d'un professionnel de santé.</p>
+
+                    </form>
                 </div>
             </div>
-        </div>
-        <div class="card-body p-4">
-            <p class="text-muted small">
-                <strong>Avertissement clinique :</strong> Cet outil est un aide à la décision basé sur l'apprentissage automatique
-                (AUC = 0.97 sur le jeu de test) et ne remplace pas le jugement clinique du médecin.
-            </p>
-
-            <form action="/predict" method="post">
-
-                <!-- Section 1: Démographie -->
-                <div class="section-title">Démographie</div>
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Âge (ans) <span class="badge-required">*</span></label>
-                        <input type="number" name="age" class="form-control" min="1" max="18" step="0.5" value="10" required>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Sexe <span class="badge-required">*</span></label>
-                        <select name="sex" class="form-select">
-                            <option value="male">Masculin</option>
-                            <option value="female">Féminin</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Poids (kg)</label>
-                        <input type="number" name="weight" class="form-control" min="5" max="150" step="0.1" placeholder="ex: 35">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Taille (cm)</label>
-                        <input type="number" name="height" class="form-control" min="50" max="200" step="0.5" placeholder="ex: 145">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">IMC (kg/m²)</label>
-                        <input type="number" name="bmi" class="form-control" min="10" max="40" step="0.1" placeholder="auto">
-                    </div>
-                </div>
-
-                <!-- Section 2: Signes vitaux -->
-                <div class="section-title">Signes vitaux</div>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Température corporelle (°C) <span class="badge-required">*</span></label>
-                        <input type="number" name="body_temperature" class="form-control" min="34" max="42" step="0.1" value="37.5" required>
-                    </div>
-                </div>
-
-                <!-- Section 3: Biologie -->
-                <div class="section-title">Biologie</div>
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">GB / WBC (×10⁹/L) <span class="badge-required">*</span></label>
-                        <input type="number" name="wbc_count" class="form-control" min="1" max="30" step="0.1" value="11.0" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">CRP (mg/L) <span class="badge-required">*</span></label>
-                        <input type="number" name="crp" class="form-control" min="0" max="500" step="0.1" value="10.0" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Hémoglobine (g/dL)</label>
-                        <input type="number" name="hemoglobin" class="form-control" min="6" max="20" step="0.1" placeholder="ex: 12.5">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Neutrophiles (%)</label>
-                        <input type="number" name="neutrophil_percentage" class="form-control" min="0" max="100" step="0.1" placeholder="ex: 65">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Plaquettes ×10⁹/L</label>
-                        <input type="number" name="thrombocyte_count" class="form-control" min="50" max="800" step="1" placeholder="ex: 280">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">GR / RBC (×10¹²/L)</label>
-                        <input type="number" name="rbc_count" class="form-control" min="2" max="7" step="0.01" placeholder="ex: 4.5">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">RDW (%)</label>
-                        <input type="number" name="rdw" class="form-control" min="10" max="20" step="0.1" placeholder="ex: 13.5">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Neutrophiles segmentés (×10⁹/L)</label>
-                        <input type="number" name="segmented_neutrophils" class="form-control" min="0" max="20" step="0.1" placeholder="ex: 7.2">
-                    </div>
-                </div>
-
-                <!-- Section 4: Examen clinique -->
-                <div class="section-title">Examen clinique</div>
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Douleur migrante FID</label>
-                        <select name="migratory_pain" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Douleur FID</label>
-                        <select name="lower_right_abd_pain" class="form-select">
-                            <option value="yes" selected>Oui</option>
-                            <option value="no">Non</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Rebond ipsilatéral</label>
-                        <select name="ipsilateral_rebound_tenderness" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Rebond contralatéral</label>
-                        <select name="contralateral_rebound_tenderness" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Douleur à la toux</label>
-                        <select name="coughing_pain" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Péritonite <span class="badge-required">⚠</span></label>
-                        <select name="peritonitis" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Signe du Psoàs</label>
-                        <select name="psoas_sign" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Nausées</label>
-                        <select name="nausea" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Anorexie</label>
-                        <select name="loss_of_appetite" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Neutrophilie</label>
-                        <select name="neutrophilia" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Transit / Selles</label>
-                        <select name="stool" class="form-select">
-                            <option value="normal" selected>Normal</option>
-                            <option value="constipation">Constipation</option>
-                            <option value="diarrhea">Diarrhée</option>
-                            <option value="mucous_stool">Selles glairesuses</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Section 5: Échographie -->
-                <div class="section-title">Échographie abdominale</div>
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Echo réalisée</label>
-                        <select name="us_performed" class="form-select">
-                            <option value="yes">Oui</option>
-                            <option value="no">Non</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Appendice visualisé</label>
-                        <select name="appendix_on_us" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Diamètre appendice (mm)</label>
-                        <input type="number" name="appendix_diameter" class="form-control" min="0" max="30" step="0.1" placeholder="ex: 7.5">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Épanchement libre</label>
-                        <select name="free_fluids" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Réaction péri-appendiculaire <span class="badge-required">⚠</span></label>
-                        <select name="surrounding_tissue_reaction" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Paroi appendicu. épaissie</label>
-                        <select name="appendix_wall_layers" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Appendicolithe</label>
-                        <select name="appendicolith" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Section 6: Analyse urinaire -->
-                <div class="section-title">Analyse urinaire</div>
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Hématies dans urines</label>
-                        <select name="rbc_in_urine" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Cétones dans urines</label>
-                        <select name="ketones_in_urine" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">GB dans urines</label>
-                        <select name="wbc_in_urine" class="form-select">
-                            <option value="no">Non</option>
-                            <option value="yes">Oui</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="mt-4 d-grid">
-                    <button type="submit" class="btn btn-primary btn-lg py-3">
-                        🔍 Analyser le risque d'appendicite
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
