@@ -24,6 +24,7 @@ Décision de conception :
   sur les modèles qui le supportent.
 """
 
+
 from __future__ import annotations
 
 import pathlib

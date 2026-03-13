@@ -16,6 +16,7 @@ Fonctions :
   4. build_results_summary   → récapitulatif des métriques de tous les modèles
 """
 
+
 from __future__ import annotations
 
 import io
