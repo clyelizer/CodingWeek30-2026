@@ -1,8 +1,0 @@
-fastapi
-uvicorn
-pydantic
-pandas
-shap
-joblib
-pytest
-httpx
