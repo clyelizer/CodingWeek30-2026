@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>PediAppendix • Connexion</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-image: url('/static/back.jpeg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            font-family: 'Inter', sans-serif;
+        }
+        .login-card {
+            background: rgba(255, 255, 255, 0.17);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 18px;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.35);
+        }
+        .logo {
+            max-height: 56px;
+        }
+        .help-text {
+            font-size: 0.85rem;
+            opacity: 0.82;
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex vh-100 align-items-center justify-content-center">
+        <div class="container" style="max-width: 480px;">
+            <div class="card login-card p-4">
+                <div class="text-center mb-4">
+                    <img src="/static/ecole.png" alt="Logo" class="logo mb-3">
+                    <h4 class="mb-1">Connexion</h4>
+                    <p class="text-muted mb-0">Accès professionnel au dossier patient</p>
+                </div>
+
+                {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+                {% endif %}
+
+                <form method="post" action="/login">
+                    <div class="mb-3">
+                        <label class="form-label">Identifiant</label>
+                        <input type="text" name="username" class="form-control" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mot de passe</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Se connecter</button>
+                </form>
+
+                <p class="help-text text-center mt-3">
+                    Comme dans un dossier médical, vos identifiants garantissent la confidentialité des données.
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
