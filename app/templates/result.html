@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PediAppendix — Résultat</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f0f4f8; }
+        .card { border: none; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .card-header { background: linear-gradient(135deg, #1e3a8a, #2563eb); }
+        .probability-ring {
+            font-size: 3.5rem; font-weight: 800; line-height: 1;
+        }
+    </style>
+</head>
+<body class="py-4">
+<div class="container" style="max-width: 860px;">
+    <div class="card mb-4">
+        <div class="card-header text-white p-4">
+            <div class="d-flex align-items-center gap-3">
+                <img src="/static/ecole.png" alt="Logo" style="height:50px; filter: brightness(0) invert(1);">
+                <div>
+                    <h3 class="mb-0 fw-bold">Résultat de l'analyse</h3>
+                    <small class="opacity-75">PediAppendix — Aide au diagnostic pédiatrique</small>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-4">
+
+            <!-- Résultat principal -->
+            <div class="row align-items-center mb-4">
+                <div class="col-md-5 text-center">
+                    <div class="probability-ring text-{{ risk_class }}">
+                        {{ prob }}%
+                    </div>
+                    <p class="text-muted mt-1 mb-0">Probabilité d'appendicite</p>
+                </div>
+                <div class="col-md-7">
+                    <div class="alert alert-{{ risk_class }} d-flex align-items-center" role="alert">
+                        <div>
+                            {% if risk_class == "danger" %}
+                            <h5 class="mb-1">⚠️ Appendicite probable</h5>
+                            <p class="mb-0 small">Le modèle prédit une <strong>appendicite</strong> avec une probabilité de {{ prob }}%.
+                            Une prise en charge chirurgicale urgente doit être envisagée.</p>
+                            {% else %}
+                            <h5 class="mb-1">✅ Appendicite peu probable</h5>
+                            <p class="mb-0 small">Le modèle prédit l'<strong>absence d'appendicite</strong> avec une probabilité de {{ 100 - prob|float | round(1) }}%.
+                            Une surveillance clinique et un bilan complémentaire peuvent être suffisants.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <p class="text-muted small mt-2">
+                        <strong>Modèle :</strong> Random Forest (AUC = 0.9287 sur le jeu de test, n=776).
+                        Seuil de décision = 50% de probabilité.
+                    </p>
+                </div>
+            </div>
+
+            <!-- SHAP Waterfall -->
+            {% if shap_b64 %}
+            <hr>
+            <h5 class="mb-3">Explication de la prédiction (SHAP Waterfall)</h5>
+            <p class="text-muted small mb-3">
+                Le graphique ci-dessous montre comment chaque variable clinique a contribué à la prédiction.
+                <span class="text-danger">Rouge</span> = facteur augmentant le risque d'appendicite,
+                <span class="text-primary">Bleu</span> = facteur diminuant le risque.
+            </p>
+            <img src="data:image/png;base64,{{ shap_b64 }}" class="img-fluid rounded" alt="SHAP Waterfall">
+            {% else %}
+            <div class="alert alert-warning small">
+                La visualisation SHAP n'a pas pu être générée pour ce patient.
+            </div>
+            {% endif %}
+
+            <!-- Bouton retour -->
+            <div class="mt-4">
+                <a href="/" class="btn btn-outline-primary">← Nouvelle analyse</a>
+            </div>
+        </div>
+    </div>
+
+    <p class="text-center text-muted small">
+        Dataset : Regensburg Pediatric Appendicitis (UCI, n=776) — Modèle entraîné le 2025.
+        <br>Cet outil est à titre expérimental uniquement et ne remplace pas le jugement médical.
+    </p>
+</div>
+</body>
+</html>

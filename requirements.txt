@@ -1,0 +1,26 @@
+# Dépendances — PediAppendix
+# Environnement : Python 3.11+
+# Installer avec : pip install -r requirements.txt
+
+# Web
+fastapi==0.129.0
+uvicorn==0.41.0
+jinja2==3.1.6
+python-multipart==0.0.22
+
+# Machine Learning
+scikit-learn==1.8.0
+joblib==1.5.1
+
+# Data
+pandas==3.0.1
+numpy==2.4.2
+openpyxl>=3.1.0        # lecture .xlsx
+
+# Visualisation & SHAP
+matplotlib==3.10.8
+shap>=0.44.0
+
+# Tests
+pytest>=8.0.0
+pytest-cov
