@@ -15,7 +15,8 @@ def test_optimize_memory_reduces_memory_and_changes_types():
     df = pd.DataFrame({
         'int_col': np.array([1, 2, 3, 4], dtype=np.int64),
         'float_col': np.array([1.0, 2.5, 3.1, 4.0], dtype=np.float64),
-        'obj_col': ['a', 'b', 'a', 'c'],
+        # Low cardinality on purpose (2/4 = 0.5) to trigger category conversion.
+        'obj_col': ['a', 'a', 'a', 'b'],
     })
 
     before = df.memory_usage(deep=True).sum()
