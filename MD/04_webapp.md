@@ -15,8 +15,10 @@ enfant et d'obtenir instantanément :
 
 ```
 FastAPI
-  ├── GET  /         → formulaire de saisie (index.html)
-  └── POST /predict  → page résultat (result.html)
+  ├── GET  /         → landing page (landing_page.html)
+  ├── GET  /login    → authentification (auth.html)
+  ├── GET  /form     → console diagnostic (diagnosis_console.html)
+  └── POST /predict  → console diagnostic mise à jour (diagnosis_console.html)
 
 Bibliothèques :
   fastapi + uvicorn  → serveur ASGI
@@ -85,7 +87,7 @@ POST /predict
   ├─ 4. Explication SHAP (compute_shap_values + make_shap_waterfall_b64)
   │       → image PNG encodée base64 (non-fatale si erreur)
   │
-  └─ 5. Rendu result.html
+  └─ 5. Rendu diagnosis_console.html
           - prob      : probabilité en %
           - decision  : "appendicite" / "pas d'appendicite"
           - risk_class: "danger" / "success" (couleur Bootstrap)
@@ -94,7 +96,7 @@ POST /predict
 
 ---
 
-## Formulaire de saisie (`app/templates/index.html`)
+## Formulaire de saisie (`app/templates/diagnosis_console.html`)
 
 Le formulaire est organisé en 4 sections cliniques :
 
@@ -126,7 +128,7 @@ Le formulaire est organisé en 4 sections cliniques :
 
 ---
 
-## Page de résultat (`app/templates/result.html`)
+## Affichage du résultat (`app/templates/diagnosis_console.html`)
 
 La page résultat affiche :
 
@@ -149,6 +151,32 @@ modèle a prédit ce score.
 ---
 
 ## Décisions de conception
+
+**Design unifie applique sur les pages hors landing :**
+Le projet utilisait des styles disperses selon les templates (`auth`, `diagnosis_console`, pages legacy), ce qui degradait la lisibilite et la maintenance. Le choix retenu est un **theme centralise** dans `app/static/css/unified_theme.css` (tokens couleur, typographie, cartes, boutons, formulaires), afin d'obtenir :
+- une experience visuelle coherente entre les ecrans,
+- un cout de maintenance reduit (modification en un seul point),
+- une meilleure evolutivite (ajout de pages sans dupliquer du CSS).
+
+**Header partage (partial Jinja) :**
+Le header est factorise dans `app/templates/partials/shared_header.html` et inclus dans les pages applicatives (`auth.html`, `diagnosis_console.html`).
+- mode public : boutons Accueil/Connexion,
+- mode connecte : actions metier (nouvelle consultation, historique, PDF, deconnexion),
+- un seul composant a maintenir pour la navigation applicative.
+
+**Gestion de l'authentification :**
+Auth basee sur session signee, sans JWT externe :
+- verification login/mot de passe contre SQLite (`users`),
+- hash mot de passe via PBKDF2 (`sha256`, sel aleatoire, 100k iterations),
+- cookie `pedi_session` signe HMAC et expire (4h),
+- controles d'acces sur `/form`, `/predict`, `/api/predict`, `/api/history`.
+
+**Identifiants de test (local) :**
+Un compte admin est cree automatiquement a l'initialisation DB si absent :
+- username : `admin`
+- password : `admin123`
+
+Ce compte est destine aux tests locaux et doit etre remplace en environnement de production.
 
 **FastAPI plutôt que Flask :**  
 FastAPI offre la validation automatique des types via Pydantic, supporte async
@@ -175,6 +203,6 @@ et centralise la logique de transformation dans le code Python.
 | Composant | Fichier | Statut |
 |-----------|---------|--------|
 | Backend FastAPI | `app/app.py` | ✅ Complet |
-| Formulaire de saisie | `app/templates/index.html` | ✅ Réécrit (10 features) |
-| Page résultat | `app/templates/result.html` | ✅ AUC corrigé (0.9287) |
+| Formulaire de saisie | `app/templates/diagnosis_console.html` | ✅ Réécrit (10 features) |
+| Page résultat | `app/templates/diagnosis_console.html` | ✅ AUC corrigé (0.9287) |
 | Démarrage uvicorn | `uvicorn app.app:app --port 8000` | ✅ Fonctionne |

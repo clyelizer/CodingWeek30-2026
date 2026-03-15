@@ -16,7 +16,12 @@ import os
 
 
 def read_dataset(filepath):
-    """Lit un dataset CSV ou Excel selon son extension."""
+    """
+    Lit un dataset depuis un fichier CSV ou Excel.
+
+    Détecte l'extension et utilise le lecteur approprié (`read_excel` ou `read_csv`).
+    Retourne un `pd.DataFrame` prêt pour le prétraitement.
+    """
     ext = os.path.splitext(filepath)[1].lower()
     if ext in ('.xlsx', '.xls'):
         return pd.read_excel(filepath)
@@ -114,8 +119,10 @@ CATEGORICAL_FEATURES = [
 # =====================================================
 def optimize_memory(df):
     """
-    Réduit la mémoire utilisée par le DataFrame en convertissant les colonnes numériques
-    vers le type le plus petit possible et les colonnes 'object' à faible cardinalité en 'category'.
+    Réduit la mémoire utilisée par le DataFrame.
+
+    Downcaste types numériques quand possible et convertit colonnes texte
+    à faible cardinalité en `category`. Affiche mesures avant/après.
     """
     print(f"Mémoire avant optimisation : {df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
     # === Optimisation des colonnes numériques ===
@@ -148,8 +155,11 @@ def optimize_memory(df):
 # =====================================================
 def load_and_preprocess(filepath, target_col='Diagnosis', test_size=0.2, random_state=42):
     """
-    Charge le fichier de données, optimise la mémoire, sépare les features et la cible,
-    divise en train/test et crée un pipeline de prétraitement adapté.
+    Orchestration complète du prétraitement des données.
+
+    Charge le dataset, valide la colonne cible, optimise la mémoire, identifie
+    features numériques/catégorielles, découpe train/test, construit et applique
+    le `preprocessor` sklearn, puis sauvegarde ce préprocesseur.
     """
     # === Lecture du dataset ===
     df = read_dataset(filepath)
@@ -206,8 +216,10 @@ def load_and_preprocess(filepath, target_col='Diagnosis', test_size=0.2, random_
 # =====================================================
 def get_feature_names(preprocessor):
     """
-    Retourne les noms des features après transformation par le préprocesseur.
-    Utile pour interpréter les modèles downstream.
+    Retourne les noms des features après transformation par `preprocessor`.
+
+    Tente d'appeler `get_feature_names_out()` pour compatibilité scikit-learn
+    et fournit des noms génériques en fallback.
     """
     try:
         return list(preprocessor.get_feature_names_out())
@@ -221,22 +233,11 @@ def get_feature_names(preprocessor):
 # =====================================================
 def save_processed_data(X_train, X_test, y_train, y_test, feature_cols, output_path='data/processed/processed_data.joblib'):
     """
-    Sauvegarde les données d'entraînement et de test traitées dans un fichier joblib.
-    
-    Paramètres:
-    -----------
-    X_train : array transformed
-        Features d'entraînement transformées
-    X_test : array transformed
-        Features de test transformées
-    y_train : Series
-        Cible d'entraînement
-    y_test : Series
-        Cible de test
-    feature_cols : list
-        Noms des features après transformation
-    output_path : str
-        Chemin de sauvegarde du fichier joblib
+    Sauvegarde les jeux traités et métadonnées dans un fichier joblib.
+
+    Prépare un dictionnaire contenant jeux transformés, shapes et nombre d'échantillons
+    puis sérialise le tout dans `output_path` pour réutilisation par l'entraînement
+    et l'API d'inférence.
     """
     os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
     
@@ -263,14 +264,10 @@ def save_processed_data(X_train, X_test, y_train, y_test, feature_cols, output_p
 # =====================================================
 def run_pipeline(raw_data_path='data/raw/dataset.xlsx', target_col='Diagnosis'):
     """
-    Lance le pipeline complet de traitement des données :
-    1. Chargement et prétraitement
-    2. Récupération des noms de features
-    3. Sauvegarde des données traitées et du préprocesseur
-    
-    Retour:
-    -------
-    dict : Dictionnaire avec les données traitées et métadonnées
+    Lance le pipeline complet de traitement et sauvegarde les artefacts.
+
+    Exécute chargement, prétraitement, extraction des noms de features et sauvegarde
+    des données transformées. Retourne un dict contenant les objets et métadonnées.
     """
     print("\n" + "="*70)
     print(" PIPELINE DE TRAITEMENT DES DONNÉES - APPENDICITE PÉDIATRIQUE")

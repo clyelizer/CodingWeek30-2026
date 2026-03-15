@@ -4,40 +4,38 @@
     <meta charset="UTF-8">
     <title>PediAppendix • Connexion</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/css/unified_theme.css">
     <style>
-        body {
-            background-image: url('/static/back.jpeg');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            font-family: 'Inter', sans-serif;
-        }
         .login-card {
-            background: rgba(255, 255, 255, 0.17);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(255,255,255,0.25);
-            border-radius: 18px;
-            box-shadow: 0 12px 35px rgba(0,0,0,0.35);
+            max-width: 520px;
         }
-        .logo {
-            max-height: 56px;
+
+        .login-title {
+            font-family: var(--font-head);
+            color: var(--white);
+            letter-spacing: 0.01em;
         }
+
         .help-text {
             font-size: 0.85rem;
-            opacity: 0.82;
+            color: var(--muted);
         }
     </style>
 </head>
-<body>
-    <div class="d-flex vh-100 align-items-center justify-content-center">
+<body class="themed-app with-shared-header">
+    {% set header_show_actions = false %}
+    {% set header_user = None %}
+    {% include "partials/shared_header.html" %}
+
+    <div class="d-flex page-viewport align-items-center justify-content-center">
         <div class="container" style="max-width: 480px;">
-            <div class="card login-card p-4">
+            <div class="card login-card glass-card p-4 pedi-form">
                 <div class="text-center mb-4">
-                    <img src="/static/ecole.png" alt="Logo" class="logo mb-3">
-                    <h4 class="mb-1">Connexion</h4>
-                    <p class="text-muted mb-0">Accès professionnel au dossier patient</p>
+                    <h4 class="mb-1 login-title">Connexion</h4>
+                    <p class="mb-0" style="color: var(--muted);">Accès professionnel au dossier patient</p>
                 </div>
 
                 {% if error %}
@@ -55,7 +53,7 @@
                         <label class="form-label">Mot de passe</label>
                         <input type="password" name="password" class="form-control" required>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Se connecter</button>
+                    <button type="submit" class="btn pedi-btn w-100">Se connecter</button>
                 </form>
 
                 <p class="help-text text-center mt-3">

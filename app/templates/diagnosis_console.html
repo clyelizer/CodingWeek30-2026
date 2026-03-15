@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <title>Diagnostic Appendicite - Expert</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/css/unified_theme.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
    <style>
     body {
@@ -215,34 +218,24 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js" integrity="sha512-YcsIPUpnGn6mN9YE76EitN1Vxq9gC2ozDSmQKJsg2xS6MRX9nUKBFu2dPG59de7ouw5rim7zhv+pWtD46P/VwA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </head>
-<body class="py-5">
-<nav class="navbar navbar-expand-lg navbar-dark" style="background-color: rgba(0, 90, 156, 0.95); backdrop-filter: blur(10px);">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="#" style="font-weight: 600;">PediAppendix Pro</a>
-        <div class="d-flex gap-2 align-items-center">
-            <span class="text-white small me-2">Connecté : <strong>{{ user }}</strong></span>
-            <button id="nav-new" class="btn btn-sm" style="background-color: rgba(255,255,255,0.2); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.3); font-weight: 600;">Nouvelle Consultation</button>
-            <button id="nav-history" class="btn btn-sm" style="background-color: rgba(255,255,255,0.2); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.3); font-weight: 600;">Historique</button>
-            <button id="nav-pdf" class="btn btn-sm" style="background-color: rgba(255,255,255,0.2); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.3); font-weight: 600;">Rapport Clinique</button>
-            <button id="nav-about" class="btn btn-sm" style="background-color: rgba(255,255,255,0.2); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.3); font-weight: 600;">À propos</button>
-            <button id="nav-logout" class="btn btn-sm btn-outline-light">Déconnexion</button>
-        </div>
-    </div>
-</nav>
+<body class="py-5 themed-app with-shared-header">
+{% set header_show_actions = true %}
+{% set header_user = user %}
+{% include "partials/shared_header.html" %}
 <div class="container-fluid mt-4">
     <div id="layout" class="high-end-layout">
         <!-- Form Panel -->
         <div class="form-panel">
-            <div class="card main-card">
-                <div class="card-header text-white text-center">
+            <div class="card main-card glass-card">
+                <div class="card-header glass-header text-center">
                     <h4 class="mb-1" style="font-weight: 600;">Évaluation Clinique de l'Appendicite Pédiatrique</h4>
                     <p style="font-size: 0.9rem; opacity: 0.9;">Outil d'Assistance Diagnostique pour Professionnels de Santé</p>
                 </div>
-                <div class="card-body">
+                <div class="card-body pedi-form">
                     <form id="diagnostic-form" action="/predict" method="post" autocomplete="off">
                         <!-- Patient Identity Section -->
                         <div class="mb-4">
-                            <h5 class="mb-3" style="color: #005A9C; border-bottom: 2px solid #005A9C; padding-bottom: 8px;">
+                            <h5 class="mb-3 section-h">
                                 <i class="fas fa-user-circle me-2"></i>Identité du Patient
                             </h5>
                             <div class="row g-3">
@@ -272,7 +265,7 @@
 
                         <!-- Physical Exam Section -->
                         <div class="mb-4">
-                            <h5 class="mb-3" style="color: #005A9C; border-bottom: 2px solid #005A9C; padding-bottom: 8px;">
+                            <h5 class="mb-3 section-h">
                                 <i class="fas fa-stethoscope me-2"></i>Examen Physique
                             </h5>
                             <div class="row g-3">
@@ -297,7 +290,7 @@
 
                         <!-- Clinical Signs Section -->
                         <div class="mb-4">
-                            <h5 class="mb-3" style="color: #005A9C; border-bottom: 2px solid #005A9C; padding-bottom: 8px;">
+                            <h5 class="mb-3 section-h">
                                 <i class="fas fa-clipboard-check me-2"></i>Signes Cliniques
                             </h5>
                             <div class="row g-3">
@@ -338,7 +331,7 @@
 
                         <!-- Lab Results Section -->
                         <div class="mb-4">
-                            <h5 class="mb-3" style="color: #005A9C; border-bottom: 2px solid #005A9C; padding-bottom: 8px;">
+                            <h5 class="mb-3 section-h">
                                 <i class="fas fa-flask me-2"></i>Résultats Biologiques
                             </h5>
                             <div class="row g-3">
@@ -359,7 +352,7 @@
 
                         <!-- Imaging Section -->
                         <div class="mb-4">
-                            <h5 class="mb-3" style="color: #005A9C; border-bottom: 2px solid #005A9C; padding-bottom: 8px;">
+                            <h5 class="mb-3 section-h">
                                 <i class="fas fa-x-ray me-2"></i>Imagerie
                             </h5>
                             <div class="row g-3">
@@ -371,7 +364,7 @@
                         </div>
 
                         <div class="text-center mt-4">
-                            <button type="submit" class="btn btn-lg px-5" style="background-color: #005A9C; color: #FFFFFF; font-weight: 600;">
+                            <button type="submit" class="btn btn-lg px-5 pedi-btn">
                                 <i class="fas fa-calculator me-2"></i>Lancer l'Évaluation Clinique
                             </button>
                         </div>
@@ -384,7 +377,7 @@
 
         <!-- Preview Panel -->
         <div class="preview-panel">
-            <div class="card preview-card">
+            <div class="card preview-card glass-card">
                 <div class="preview-header">
                     <h5 class="mb-0" style="font-weight: 600;">Prévisualisation & Analyse</h5>
                     <small style="opacity: 0.9;">Résultats en temps réel</small>
@@ -799,7 +792,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Conteneur invisible pour génération PDF -->
 <div id="pdf-report" class="d-none"></div>
 
-<footer class="mt-5 py-4" style="background-color: #F8F9FA; border-top: 1px solid #E5E7EB;">
+<footer class="mt-5 py-4 themed-footer">
     <div class="container text-center">
         <div class="row">
             <div class="col-md-4">

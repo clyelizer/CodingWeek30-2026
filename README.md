@@ -37,8 +37,9 @@ projet/
 ├── app/
 │   ├── app.py               interface FastAPI
 │   └── templates/
-│       ├── index.html       formulaire de saisie (10 features)
-│       └── result.html      page de résultat + graphique SHAP
+│       ├── landing_page.html      page d'accueil
+│       ├── auth.html              page de connexion
+│       └── diagnosis_console.html console diagnostic (saisie + résultat + historique)
 ├── notebooks/
 │   └── eda.ipynb            analyse exploratoire du dataset
 ├── MD/

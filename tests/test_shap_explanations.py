@@ -1,3 +1,10 @@
+"""
+Tests pour `src/shap_explanations.py`.
+
+Vérifient l'extraction normalisée des valeurs SHAP et le comportement
+quand la dépendance `shap` est absente (skip gracieux des plots).
+"""
+
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))

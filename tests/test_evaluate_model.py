@@ -1,3 +1,10 @@
+"""
+Tests pour `src/evaluate_model.py` : métriques, CV et sauvegarde de la ROC.
+
+Vérifient la forme des métriques retournées, la validation croisée et
+que la génération d'artefacts (ROC) fonctionne quand activée.
+"""
+
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))

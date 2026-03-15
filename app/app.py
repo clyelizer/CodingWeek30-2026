@@ -90,7 +90,13 @@ _BINARY_COLS = {
 
 
 def _is_predictive_estimator(obj: object) -> bool:
-    """Vérifie le contrat minimal attendu pour la prédiction."""
+    """
+    Vérifie le contrat minimal attendu pour la prédiction.
+
+    Retourne True si l'objet fourni expose les méthodes `predict` et `predict_proba`.
+    Utilisé pour valider dynamiquement des artefacts chargés depuis disque.
+    Cette vérification favorise la robustesse au démarrage de l'application.
+    """
     return callable(getattr(obj, "predict", None)) and callable(getattr(obj, "predict_proba", None))
 
 
@@ -163,6 +169,12 @@ _load_resources()
 # ---------------------------------------------------------------------------
 
 def _get_db_connection() -> sqlite3.Connection:
+    """
+    Ouvre et retourne une connexion SQLite configurée.
+
+    Configure `row_factory` pour obtenir des lignes accessibles comme des dicts.
+    Centralise la configuration DB pour faciliter tests et maintenance.
+    """
     conn = sqlite3.connect(str(_DB_PATH), detect_types=sqlite3.PARSE_DECLTYPES)
     conn.row_factory = sqlite3.Row
     return conn
@@ -173,13 +185,24 @@ def _get_db_connection() -> sqlite3.Connection:
 # ---------------------------------------------------------------------------
 
 def _hash_password(password: str) -> str:
-    """Hash du mot de passe (PBKDF2 + sel aléatoire)."""
+    """
+    Hash le mot de passe en utilisant PBKDF2 + sel aléatoire.
+
+    Renforce la résistance aux attaques par dictionnaire et rainbow tables.
+    Renvoie une chaîne encodée en base64 contenant sel+digest.
+    """
     salt = os.urandom(16)
     dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
     return base64.b64encode(salt + dk).decode()
 
 
 def _verify_password(password: str, hashed: str) -> bool:
+    """
+    Vérifie qu'un mot de passe correspond au `hashed` stocké.
+
+    Décode le sel+digest stocké, recalcule PBKDF2 et compare en temps constant.
+    Retourne True si la vérification réussit, False sinon.
+    """
     try:
         raw = base64.b64decode(hashed.encode())
         salt, dk = raw[:16], raw[16:]
@@ -190,7 +213,12 @@ def _verify_password(password: str, hashed: str) -> bool:
 
 
 def _make_session_token(username: str) -> str:
-    """Génère un token signé pour la session."""
+    """
+    Génère un token de session signé et encodé.
+
+    Le token contient `username|expires|signature` et est encodé URL-safe en base64.
+    Permet gestion stateless des sessions sans stockage côté serveur.
+    """
     expires = int(time.time()) + _SESSION_DURATION
     payload = f"{username}|{expires}"
     signature = hmac.new(_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
@@ -198,6 +226,12 @@ def _make_session_token(username: str) -> str:
 
 
 def _verify_session_token(token: str) -> str | None:
+    """
+    Vérifie et décode un token de session.
+
+    Valide la signature HMAC et la date d'expiration; retourne `username` si valide.
+    Retourne None en cas d'échec (signature invalide ou expiré).
+    """
     try:
         raw = base64.urlsafe_b64decode(token.encode()).decode()
         username, expires, signature = raw.split("|")
@@ -219,7 +253,12 @@ def _get_current_user(request: Request) -> str | None:
 
 
 def _get_user(username: str) -> dict | None:
-    """Retourne l'utilisateur si existant."""
+    """
+    Retourne les informations utilisateur pour `username` si présent en base.
+
+    Initialise la DB si besoin, exécute la requête et renvoie un dict ou None.
+    Utilisé pour l'authentification et la gestion d'accès dans les routes.
+    """
     _init_db()
     with _get_db_connection() as conn:
         row = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
@@ -227,7 +266,12 @@ def _get_user(username: str) -> dict | None:
 
 
 def _create_default_admin() -> None:
-    """Crée l'utilisateur admin par défaut si absent."""
+    """
+    Crée un utilisateur `admin` par défaut si absent dans la table `users`.
+
+    Utilise `_hash_password` pour stocker le mot de passe de manière sécurisée.
+    Destiné à faciliter l'accès initial lors du déploiement local ou tests.
+    """
     _init_db()
     with _get_db_connection() as conn:
         exists = conn.execute("SELECT 1 FROM users WHERE username = ?", ("admin",)).fetchone()
@@ -239,7 +283,12 @@ def _create_default_admin() -> None:
 
 
 def _init_db() -> None:
-    """Crée la base de données si elle n'existe pas."""
+    """
+    Initialise la base SQLite (création des tables si manquantes).
+
+    Crée le dossier parent si nécessaire et les tables `records` et `users`.
+    Insère l'utilisateur admin par défaut via `INSERT OR IGNORE`.
+    """
     _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     with _get_db_connection() as conn:
         conn.execute(
@@ -300,7 +349,12 @@ def _init_db() -> None:
 
 
 def _save_record(record: dict) -> None:
-    """Sauve une analyse dans la base de données."""
+    """
+    Sauvegarde une entrée d'analyse clinique dans la table `records`.
+
+    Complète le champ `created_at` si absent et écrit la ligne en base.
+    Utilisé pour conserver l'historique consultable par l'API.
+    """
     _init_db()
     record = dict(record)
     record.setdefault("created_at", datetime.now(UTC).isoformat())
@@ -352,7 +406,12 @@ def _save_record(record: dict) -> None:
 
 
 def _get_history(limit: int = 20) -> list[dict]:
-    """Retourne les dernières analyses enregistrées."""
+    """
+    Retourne les dernières analyses enregistrées au format liste de dicts.
+
+    Effectue une requête SQL ordonnée par `created_at` décroissant et applique la limite.
+    Utile pour afficher l'historique sur l'interface admin.
+    """
     _init_db()
     with _get_db_connection() as conn:
         cursor = conn.execute(

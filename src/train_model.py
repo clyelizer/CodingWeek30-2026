@@ -34,7 +34,12 @@ RANDOM_STATE = 42
 
 
 def load_model(model_path='models/Random_Forest.pkl'):
-    """Charge un modèle depuis un chemin explicite ou des noms alternatifs connus."""
+    """
+    Charge un modèle depuis un chemin explicite ou noms alternatifs connus.
+
+    Cherche d'abord le `model_path` demandé puis parcourt une liste de fallback
+    pour tolérer différents schémas de nommage. Retourne l'objet désérialisé.
+    """
     candidate_path = str(model_path)
     if os.path.exists(candidate_path):
         return joblib.load(candidate_path)
@@ -60,7 +65,12 @@ def load_model(model_path='models/Random_Forest.pkl'):
 
 
 def train_and_evaluate_all(models, X_train, y_train, X_test, y_test, output_dir='reports/figures'):
-    """Entraîne et évalue tous les modèles fournis."""
+    """
+    Entraîne et évalue tous les modèles fournis dans le dict `models`.
+
+    Pour chaque estimateur, appelle `evaluate_model` qui produit métriques
+    et figures (ex. ROC). Retourne un dict de résultats indexés par nom.
+    """
     results = {}
     for name, model in models.items():
         print(f"\n--- {name} ---")
@@ -78,17 +88,32 @@ def train_and_evaluate_all(models, X_train, y_train, X_test, y_test, output_dir=
 
 
 def build_results_dataframe(results):
-    """Construit le DataFrame de comparaison des modèles."""
+    """
+    Convertit le dictionnaire de résultats en un `DataFrame` lisible.
+
+    Transpose pour obtenir une ligne par modèle et colonnes métriques.
+    Facilite l'export CSV et la sélection du meilleur modèle.
+    """
     return pd.DataFrame(results).T
 
 
 def select_best_model(results_df, metric='ROC-AUC'):
-    """Retourne le nom du meilleur modèle selon une métrique."""
+    """
+    Sélectionne le meilleur modèle selon la métrique fournie.
+
+    Par défaut utilise `ROC-AUC`. Retourne le nom (index) du modèle gagnant.
+    Permet changer la métrique selon l'objectif (F1, précision, rappel, ...).
+    """
     return results_df[metric].idxmax()
 
 
 def train_and_save_best_model(best_name, X_train, y_train, models_dir='models'):
-    """Entraîne et sauvegarde le meilleur modèle."""
+    """
+    Entraîne le modèle sélectionné sur les données d'entraînement et le sauve.
+
+    Sérialise l'estimateur final dans `models/` et écrit un JSON méta décrivant
+    le modèle sauvegardé pour éviter ambiguïtés entre artefacts.
+    """
     best_model = build_models()[best_name]
     best_model.fit(X_train, y_train)
 
@@ -104,7 +129,12 @@ def train_and_save_best_model(best_name, X_train, y_train, models_dir='models'):
 
 
 def run_shap_reports(best_model, X_train, X_test, feature_names, figures_dir='reports/figures'):
-    """Génère les sorties SHAP pour le meilleur modèle."""
+    """
+    Génère et sauvegarde les rapports SHAP (summary et waterfall) pour le modèle.
+
+    Utilise `shap_explanations` si présent; les images sont écrites dans `figures_dir`.
+    Fournit éléments d'interprétabilité pour la revue clinique.
+    """
     try:
         from .shap_explanations import generate_shap_summary, plot_waterfall
     except ImportError:
@@ -127,7 +157,12 @@ def run_shap_reports(best_model, X_train, X_test, feature_names, figures_dir='re
     return {'summary': summary_result, 'waterfall': waterfall_result}
 
 def build_models():
-    """Instancie les trois modèles sélectionnés."""
+    """
+    Instancie les modèles candidats (RandomForest par défaut).
+
+    Tente d'ajouter LightGBM et CatBoost si les dépendances sont présentes.
+    Paramètres choisis pour un compromis temps/performance sur datasets modérés.
+    """
     models = {
         'Random Forest': RandomForestClassifier(
             n_estimators=200,

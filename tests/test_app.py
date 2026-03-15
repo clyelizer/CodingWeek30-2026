@@ -1,3 +1,10 @@
+"""
+Tests d'intégration et unitaires pour l'application web (`app.app`).
+
+Ce module vérifie le comportement des routes, du loader de modèle,
+et des helpers de transformation de formulaire en entrée modèle.
+"""
+
 import pathlib
 import importlib
 import sys

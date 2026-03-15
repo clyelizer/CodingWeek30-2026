@@ -1,4 +1,10 @@
-# tests/test_data_processing.py
+"""
+Tests unitaires pour le module `src/data_processing.py`.
+
+Vérifient la lecture, l'optimisation mémoire, la construction du préprocesseur
+et les helpers de séparation/validation des colonnes.
+"""
+
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
