@@ -1,153 +1,148 @@
-# PediAppendix — Aide au diagnostic pédiatrique de l'appendicite
+# PediAppendix — Documentation synthétique
 
-## Présentation
+Ce README reprend et condense la documentation technique présente dans le
+répertoire `MD/`. Il décrit l'architecture, le pipeline de données, les choix
+méthodologiques et les commandes essentielles pour exécuter le projet.
 
-**PediAppendix** est un système d'aide à la décision clinique pour le diagnostic
-de l'appendicite pédiatrique.
-
-À partir de **10 paramètres cliniques courants** (examen physique, biologie,
-échographie), il prédit la probabilité d'appendicite et fournit une explication
-SHAP détaillée de chaque prédiction.
-
-**Dataset :** Regensburg Pediatric Appendicitis (UCI), n = 776 patients.  
-**Modèle :** Random Forest — AUC-ROC = **0.9287** sur le jeu de test (n = 156).
+Résumé : modèle de production = **Random Forest** (AUC-ROC = **0.9287** sur
+le jeu de test). Dataset : Regensburg Pediatric Appendicitis (UCI), n≈776.
 
 ---
 
-## Architecture du projet
+## Index rapide 
+
+- Documentation détaillée : [MD/README.md](MD/README.md)
+- Pipeline de preprocessing : [MD/01_data_processing.md](MD/01_data_processing.md)
+- Entraînement & sélection : [MD/02_train_model.md](MD/02_train_model.md)
+- Évaluation & SHAP : [MD/03_evaluate_model.md](MD/03_evaluate_model.md)
+- Interface web : [MD/04_webapp.md](MD/04_webapp.md)
+
+---
+
+## Arborescence clé
 
 ```
-projet/
-├── data/
-│   ├── raw/          data_finale.xlsx         (776 patients, 27 variables)
-│   └── processed/    processed_data.joblib    (split train/test stratifié 80/20)
-├── models/
-│   ├── random_forest.joblib        ← modèle de production (AUC 0.9287)
-│   ├── gradient_boosting.joblib    (AUC 0.9141)
-│   ├── logistic_regression.joblib  (AUC 0.8283)
-│   └── svm.joblib                  (AUC 0.8102)
-├── src/
-│   ├── data_processing.py   pipeline de traitement des données
-│   ├── train_model.py       entraînement et évaluation des modèles
-│   └── evaluate_model.py    prédiction individuelle + explications SHAP
-├── tests/
-│   ├── test_data_processing.py   11 tests
-│   ├── test_model.py             15 tests
-│   └── test_evaluate_model.py    8 tests        → 34 tests total, tous passent
-├── app/
-│   ├── app.py               interface FastAPI
-│   └── templates/
-│       ├── landing_page.html      page d'accueil
-│       ├── auth.html              page de connexion
-│       └── diagnosis_console.html console diagnostic (saisie + résultat + historique)
-├── notebooks/
-│   └── eda.ipynb            analyse exploratoire du dataset
-├── MD/
-│   ├── README.md            index de la documentation
-│   ├── 01_data_processing.md
-│   ├── 02_train_model.md
-│   ├── 03_evaluate_model.md
-│   └── 04_webapp.md
-├── conftest.py              configuration pytest (sys.path)
-├── requirements.txt
-└── Dockerfile
+.
+├── app/                   # FastAPI + templates
+├── data/                  # raw/ et processed/
+├── models/                # .joblib (modèles et preprocessors)
+├── src/                   # data_processing.py, train_model.py, evaluate_model.py
+├── tests/                 # suite pytest (34 tests)
+└── MD/                    # documentation technique détaillée
 ```
 
 ---
 
-## Features du modèle (10)
+## Pipeline de données (résumé)
 
-| # | Variable | Type | Source clinique |
-|---|----------|------|----------------|
-| 1 | `Lower_Right_Abd_Pain` | Binaire (oui/non) | Examen clinique |
-| 2 | `Migratory_Pain` | Binaire (oui/non) | Examen clinique |
-| 3 | `Ipsilateral_Rebound_Tenderness` | Binaire (oui/non) | Examen clinique |
-| 4 | `Nausea` | Binaire (oui/non) | Examen clinique |
-| 5 | `Body_Temperature` | Numérique (°C) | Examen clinique |
-| 6 | `WBC_Count` | Numérique (G/L) | Biologie |
-| 7 | `Neutrophil_Percentage` | Numérique (%) | Biologie |
-| 8 | `CRP` | Numérique (mg/L) | Biologie |
-| 9 | `Appendix_Diameter` | Numérique (mm) | Échographie |
-| 10 | `Age` | Numérique (années) | Démographique |
+1. Chargement des données brutes depuis `data/raw/`.
+2. Nettoyage et optimisation mémoire (`optimize_memory`).
+3. Encodage / imputation : median pour numériques, mode pour catégoriques.
+4. Split stratifié train/test (80/20).
+5. Prétraitement via `ColumnTransformer` : `StandardScaler` pour numériques
+   et `OneHotEncoder(handle_unknown='ignore')` pour catégoriques.
+6. Sauvegarde des artefacts : `models/preprocessor.pkl` et
+   `data/processed/processed_data.joblib`.
 
----
-
-## Résultats
-
-| Modèle | AUC-ROC | F1 (macro) | Accuracy |
-|--------|---------|------------|----------|
-| **Random Forest** ← retenu | **0.9287** | **0.8457** | **0.8526** |
-| Gradient Boosting | 0.9141 | 0.8178 | 0.8269 |
-| Logistic Regression | 0.8283 | 0.7354 | 0.7564 |
-| SVM (RBF) | 0.8102 | 0.7198 | 0.7436 |
-
-**Interprétation de l'AUC = 0.9287 :** en tirant aléatoirement un patient positif
-et un patient négatif, le modèle attribue une probabilité plus élevée au positif
-dans 92.87% des cas.
+Décisions clés : StandardScaler dans chaque Pipeline pour éviter toute data
+leakage ; OneHotEncoding pour variables nominales ; import lazy de `shap`
+pour éviter le coût d'import au démarrage.
 
 ---
 
-## Installation
+## Modèles et métriques
 
-Python recommande : **3.11.x** (version cible du projet pour minimiser les incompatibilites binaires).
+Modèles entraînés (exemples) : Logistic Regression, Random Forest,
+Gradient Boosting, SVM (RBF). Chaque modèle est encapsulé dans un
+`sklearn.Pipeline` contenant le scaler puis le classifieur.
+
+Métrique principale : **AUC-ROC** (robuste au choix du seuil en contexte médical).
+Métriques secondaires : F1 macro, accuracy.
+
+Résultats synthétiques (jeu test n≈156) :
+
+|                Modèle | AUC-ROC |
+| ---------------------: | :-----: |
+| Random Forest (retenu) | 0.9287 |
+|      Gradient Boosting | 0.9141 |
+|    Logistic Regression | 0.8283 |
+|              SVM (RBF) | 0.8102 |
+
+---
+
+## Interface web (FastAPI)
+
+- Points d'accès principaux :
+
+  - `GET  /` → landing page
+  - `GET  /login` → authentification
+  - `GET  /form` → formulaire de saisie
+  - `POST /predict` → calcul et rendu du résultat
+- Chargement singleton au démarrage : modèle production
+  (`models/random_forest.joblib`) et `data/processed/...` (feature_cols,
+  médianes utilisées comme valeurs par défaut du formulaire).
+- SHAP : calcul non-fatal — si la génération échoue, l'interface rend quand
+  même la probabilité sans le graphique explicatif.
+
+---
+
+## Commandes essentielles
+
+Installation :
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
+Traitement des données :
 
-## Utilisation
-
-### 1. Traitement des données (une seule fois)
 ```bash
 python src/data_processing.py
-# → data/processed/processed_data.joblib
+# --> data/processed/processed_data.joblib
 ```
 
-### 2. Entraînement des modèles (une seule fois)
+Entraînement :
+
 ```bash
 python src/train_model.py
-# → models/random_forest.joblib (+ 3 autres modèles)
+# --> models/*.joblib
 ```
 
-### 3. Tests unitaires
+Tests :
+
 ```bash
-python -m pytest tests/ --rootdir="." -q
+python -m pytest tests/ -q
 # 34 passed
 ```
 
-### 4. Lancement de l'application web
+Lancer l'app (dev) :
+
 ```bash
 uvicorn app.app:app --host 0.0.0.0 --port 8000 --reload
-# → http://localhost:8000
-```
-
-### Docker
-```bash
-docker build -t pediappendix .
-docker run -p 8000:8000 pediappendix
+# puis ouvrir http://localhost:8000
 ```
 
 ---
 
-## Paradigme de développement
+## Points d'attention et recommandations
 
-Ce projet suit un paradigme **fonctionnel strict** :
-- **Une fonction = une tâche précise et testable**
-- **Un test = une fonction = une assertion**
-- Pas d'état global mutable entre fonctions
-- Pas de data leakage : StandardScaler encapsulé dans chaque Pipeline sklearn
-
----
-
-## Documentation technique
-
-Voir le dossier [`MD/`](MD/README.md) pour la documentation détaillée
-de chaque module avec les sorties et décisions de conception.
+- Vérifier que la colonne cible `Diagnosis` est encodée numériquement avant
+  d'exécuter le pipeline (`0/1`). Si elle est textuelle, utiliser
+  `LabelEncoder()` ou mapping explicite.
+- Ajouter `'Segmented_Neutrophils'` aux features numériques si présent dans
+  vos données (forte corrélation observée dans l'EDA).
+- Pour gérer plus finement le déséquilibre de classes : SMOTE ou réglage
+  des poids, mais `class_weight='balanced'` a été appliqué sur plusieurs modèles.
 
 ---
 
-> ⚠️ **Avertissement médical** — Cet outil est à usage expérimental uniquement.
-> Il ne remplace pas le jugement clinique d'un professionnel de santé.
-> Dataset : Regensburg Pediatric Appendicitis — UCI Machine Learning Repository.
+## Avertissement
+
+Ce projet est un outil de recherche / démonstration. Il ne remplace pas le
+jugement clinique et ne doit pas être utilisé en production sans validation
+clinique et conformité aux réglementations en vigueur.
+
+---
+
+Pour la documentation technique complète et les justifications détaillées,
+consultez les fichiers du dossier [`MD/`](MD/README.md).

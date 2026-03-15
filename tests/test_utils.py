@@ -1,3 +1,10 @@
+"""
+Tests pour les utilitaires généraux dans `src/utils.py`.
+
+Vérifient le formatage d'en-têtes, la création de répertoires et la reproductibilité
+via `set_seed`.
+"""
+
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))

@@ -1,3 +1,10 @@
+"""
+Tests unitaires pour `src/train_model.py`.
+
+Valident la construction du DataFrame de résultats, la sélection du meilleur modèle
+et la présence des estimateurs attendus dans `build_models()`.
+"""
+
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))

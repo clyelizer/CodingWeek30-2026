@@ -1,3 +1,10 @@
+"""
+Tests ciblés pour la fonction `optimize_memory` du module de prétraitement.
+
+Vérifient que la mémoire est réduite et que les types sont downcastés/conservés
+conformément aux attentes.
+"""
+
 import pandas as pd
 import numpy as np
 

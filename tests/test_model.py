@@ -1,4 +1,9 @@
-# tests/test_model.py
+"""
+Tests d'intégration centrés sur la présence et le comportement des artefacts
+de modèle et du préprocesseur (models/preprocessor.pkl et fichiers dans models/).
+Vérifient le chargement, la préparation d'entrée et des prédictions plausibles.
+"""
+
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
