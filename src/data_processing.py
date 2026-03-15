@@ -1,253 +1,171 @@
-"""
-src/data_processing.py
-======================
-Pipeline de préparation des données — diagnostic pédiatrique de l'appendicite.
+# src/data_processing.py
 
-Paradigme fonctionnel strict :
-  - Une fonction = une tâche précise et testable.
-  - Aucun effet de bord global : chaque fonction prend un DataFrame en entrée
-    et retourne un nouveau DataFrame (pas de mutation en place).
-  - Chaque fonction est couverte par exactement un test unitaire avec une
-    assertion précise.
 
-Étapes du pipeline :
-  1. load_raw_data          → charge le fichier Excel brut
-  2. select_columns         → conserve uniquement les features + la cible
-  3. encode_binary_columns  → encode yes/no → 1/0
-  4. split_features_target  → sépare X et y
-  5. split_train_test       → split stratifié 80/20
-  6. save_processed_data    → exporte les fichiers .joblib dans data/processed/
-
-Décision de conception :
-  Le scaling (StandardScaler) n'est PAS appliqué ici. Il sera encapsulé dans
-  un sklearn Pipeline propre à chaque modèle dans train_model.py, ce qui
-  évite toute fuite de données (data leakage) entre train et test.
-"""
-
-from __future__ import annotations
-
-import pathlib
-from typing import Tuple
-
+# ===============================
+# === IMPORTS PRINCIPAUX ========
+# ===============================
 import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+import joblib
+import os
 
-
-# ---------------------------------------------------------------------------
-# Constantes du projet
-# ---------------------------------------------------------------------------
-
-FEATURE_COLS: list[str] = [
-    "Lower_Right_Abd_Pain",
-    "Migratory_Pain",
-    "Body_Temperature",
-    "WBC_Count",
-    "CRP",
-    "Neutrophil_Percentage",
-    "Ipsilateral_Rebound_Tenderness",
-    "Appendix_Diameter",
-    "Nausea",
-    "Age",
+# =====================================================
+# === LISTES DES COLONNES NUMÉRIQUES & CATÉGORIELLES ===
+# =====================================================
+NUMERIC_FEATURES = [
+    'Age', 'BMI', 'Appendix_Diameter', 'Body_Temperature', 'WBC_Count',
+    'Neutrophil_Percentage', 'Hemoglobin', 'RDW', 'Thrombocyte_Count', 'CRP'
 ]
 
-TARGET_COL: str = "Diagnosis"
-
-# Colonnes avec des valeurs textuelles "yes"/"no" à encoder en 1/0
-BINARY_COLS: list[str] = [
-    "Lower_Right_Abd_Pain",
-    "Migratory_Pain",
-    "Ipsilateral_Rebound_Tenderness",
-    "Nausea",
+CATEGORICAL_FEATURES = [
+    'Sex', 'Appendix_on_US', 'Migratory_Pain', 'Lower_Right_Abd_Pain',
+    'Contralateral_Rebound_Tenderness', 'Coughing_Pain', 'Nausea',
+    'Loss_of_Appetite', 'Ketones_in_Urine', 'RBC_in_Urine', 'WBC_in_Urine',
+    'Dysuria', 'Psoas_Sign', 'Ipsilateral_Rebound_Tenderness', 'US_Performed',
+    'Free_Fluids'
 ]
 
-
-# ---------------------------------------------------------------------------
-# Fonctions du pipeline
-# ---------------------------------------------------------------------------
-
-def load_raw_data(path: str | pathlib.Path) -> pd.DataFrame:
+# =====================================================
+# === FONCTION : OPTIMISATION DE LA MÉMOIRE DU DATAFRAME ===
+# =====================================================
+def optimize_memory(df):
     """
-    Charge le fichier Excel brut et retourne un DataFrame.
-
-    Paramètre
-    ---------
-    path : chemin vers le fichier .xlsx
-
-    Retourne
-    --------
-    pd.DataFrame brut, sans aucune transformation.
-
-    Assertion testée : le DataFrame chargé est non vide.
+    Réduit la mémoire utilisée par le DataFrame en convertissant les colonnes numériques
+    vers le type le plus petit possible et les colonnes 'object' à faible cardinalité en 'category'.
     """
-    df = pd.read_excel(path)
-    assert len(df) > 0, f"Le fichier {path} est vide."
+    print(f"Mémoire avant optimisation : {df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
+    # === Optimisation des colonnes numériques ===
+    for col in df.select_dtypes(include=[np.number]).columns:
+        c_min, c_max = df[col].min(), df[col].max()
+        if pd.api.types.is_integer_dtype(df[col]):
+            # Conversion vers le plus petit type entier possible
+            for dtype in [np.int8, np.int16, np.int32, np.int64]:
+                info = np.iinfo(dtype)
+                if info.min <= c_min and c_max <= info.max:
+                    df[col] = df[col].astype(dtype)
+                    break
+        else:
+            # Conversion vers float32 si possible
+            if np.finfo(np.float32).min <= c_min and c_max <= np.finfo(np.float32).max:
+                df[col] = df[col].astype(np.float32)
+
+    # === Conversion des colonnes 'object' en 'category' si peu de modalités ===
+    for col in df.select_dtypes(include='object').columns:
+        if df[col].nunique() / len(df) < 0.5:
+            df[col] = df[col].astype('category')
+
+    after = df.memory_usage(deep=True).sum() / 1024**2
+    print(f"Mémoire après optimisation  : {after:.2f} MB")
     return df
 
-
-def select_columns(
-    df: pd.DataFrame,
-    feature_cols: list[str] = FEATURE_COLS,
-    target_col: str = TARGET_COL,
-) -> pd.DataFrame:
+# =====================================================
+# === FONCTION : CHARGEMENT ET PRÉTRAITEMENT COMPLET DU DATASET ===
+# =====================================================
+def load_and_preprocess(filepath, target_col='Diagnosis', test_size=0.2, random_state=42):
     """
-    Conserve uniquement les colonnes utiles (features + cible) et supprime
-    les lignes avec valeurs manquantes sur ces colonnes.
-
-    Décision : On ne conserve que les colonnes nécessaires dès cette étape
-    pour éviter de transporter des données inutiles dans le pipeline.
-
-    Assertion testée : toutes les colonnes demandées sont présentes dans le
-    DataFrame résultant.
+    Charge le fichier de données, optimise la mémoire, sépare les features et la cible,
+    divise en train/test et crée un pipeline de prétraitement adapté.
     """
-    cols = feature_cols + [target_col]
-    missing = [c for c in cols if c not in df.columns]
-    assert len(missing) == 0, f"Colonnes absentes de la DB : {missing}"
+    # === Détection de l'extension pour choisir la méthode de chargement ===
+    ext = os.path.splitext(filepath)[1].lower()
+    if ext in ('.xlsx', '.xls'):
+        df = pd.read_excel(filepath)
+    else:
+        df = pd.read_csv(filepath)
+    print(f"Dataset chargé : {df.shape[0]} lignes × {df.shape[1]} colonnes")
 
-    df_selected = df[cols].dropna().reset_index(drop=True)
-    return df_selected
+    # === Vérification de la présence de la colonne cible ===
+    if target_col not in df.columns:
+        raise ValueError(f"Colonne cible '{target_col}' introuvable. Colonnes : {df.columns.tolist()}")
 
-
-def encode_binary_columns(
-    df: pd.DataFrame,
-    binary_cols: list[str] = BINARY_COLS,
-) -> pd.DataFrame:
-    """
-    Encode les colonnes catégorielles binaires "yes"/"no" en 1/0.
-
-    Décision : On utilise un mapping explicite plutôt que LabelEncoder pour
-    garantir que "yes" → 1 et "no" → 0 indépendamment de l'ordre alphabétique.
-
-    Assertion testée : les colonnes encodées ne contiennent que des valeurs
-    dans {0, 1}.
-    """
-    df_encoded = df.copy()
-    mapping = {"yes": 1, "no": 0}
-    for col in binary_cols:
-        df_encoded.loc[:, col] = df_encoded[col].map(mapping)
-        unknown = df_encoded[col].isna().sum()
-        assert unknown == 0, (
-            f"Colonne '{col}' contient des valeurs inconnues après encodage."
-        )
-    return df_encoded
-
-
-def split_features_target(
-    df: pd.DataFrame,
-    feature_cols: list[str] = FEATURE_COLS,
-    target_col: str = TARGET_COL,
-) -> Tuple[pd.DataFrame, pd.Series]:
-    """
-    Sépare le DataFrame en matrice de features X et vecteur cible y.
-
-    Assertion testée : X et y ont le même nombre de lignes.
-    """
-    X = df[feature_cols].copy()
+    # === Séparation features/cible ===
+    X = df.drop(columns=[target_col])
     y = df[target_col].copy()
-    assert len(X) == len(y), "X et y ont des longueurs différentes."
-    return X, y
 
+    # === Vérification que la cible est bien numérique (0/1) ===
+    if not pd.api.types.is_numeric_dtype(y):
+        raise ValueError("La cible doit être numérique (0/1).")
 
-def split_train_test(
-    X: pd.DataFrame,
-    y: pd.Series,
-    test_size: float = 0.2,
-    random_state: int = 42,
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-    """
-    Effectue un split stratifié 80/20 train/test.
+    # === Optimisation mémoire sur les features ===
+    X = optimize_memory(X)
 
-    Décision : Le split est stratifié sur y pour préserver la proportion
-    de cas positifs (appendicite) dans les deux ensembles, compte tenu du
-    léger déséquilibre de classes (461 négatifs / 315 positifs).
+    # === Identification des colonnes numériques et catégorielles présentes dans X ===
+    numeric_features = [col for col in NUMERIC_FEATURES if col in X.columns]
+    categorical_features = [col for col in CATEGORICAL_FEATURES if col in X.columns]
 
-    Assertion testée : la proportion de positifs dans train et test diffère
-    de moins de 2 points de pourcentage.
-    """
+    # === Colonnes non listées → ajoutées comme catégorielles (sécurité) ===
+    other_cols = [col for col in X.columns if col not in numeric_features and col not in categorical_features]
+    if other_cols:
+        print(f"Colonnes non listées (traitées comme catégorielles) : {other_cols}")
+        categorical_features.extend(other_cols)
+
+    print(f"  Numériques   ({len(numeric_features)}) : {numeric_features}")
+    print(f"  Catégorielles({len(categorical_features)}) : {categorical_features}")
+
+    # === Séparation en train/test (stratification sur la cible) ===
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=test_size, random_state=random_state, stratify=y
     )
-    ratio_train = y_train.mean()
-    ratio_test = y_test.mean()
-    assert abs(ratio_train - ratio_test) < 0.02, (
-        f"Split non stratifié : train={ratio_train:.3f}, test={ratio_test:.3f}"
-    )
-    return X_train, X_test, y_train, y_test
+    print(f"Split → train : {len(X_train)} | test : {len(X_test)}")
 
+    # === Pipeline pour les variables numériques : imputation + standardisation ===
+    numeric_pipe = Pipeline([
+        ('imputer', SimpleImputer(strategy='median')),
+        ('scaler', StandardScaler())
+    ])
 
-def save_processed_data(
-    X_train: pd.DataFrame,
-    X_test: pd.DataFrame,
-    y_train: pd.Series,
-    y_test: pd.Series,
-    output_dir: str | pathlib.Path,
-) -> pathlib.Path:
+    # === Pipeline pour les variables catégorielles : imputation + one-hot encoding ===
+    categorical_pipe = Pipeline([
+        ('imputer', SimpleImputer(strategy='most_frequent')),
+        ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
+    ])
+
+    # === Assemblage des pipelines dans un ColumnTransformer ===
+    transformers = []
+    if numeric_features:
+        transformers.append(('num', numeric_pipe, numeric_features))
+    if categorical_features:
+        transformers.append(('cat', categorical_pipe, categorical_features))
+
+    preprocessor = ColumnTransformer(transformers=transformers, remainder='drop')
+
+    # === Apprentissage du préprocesseur sur le train et transformation des deux jeux ===
+    X_train_processed = preprocessor.fit_transform(X_train)
+    X_test_processed = preprocessor.transform(X_test)
+
+    # === Sauvegarde du préprocesseur pour réutilisation future ===
+    os.makedirs('models', exist_ok=True)
+    joblib.dump(preprocessor, 'models/preprocessor.pkl')
+    print("Préprocesseur sauvegardé → models/preprocessor.pkl")
+
+    return X_train_processed, X_test_processed, y_train, y_test, preprocessor
+
+# =====================================================
+# === FONCTION : RÉCUPÉRATION DES NOMS DE FEATURES APRÈS TRANSFORMATION ===
+# =====================================================
+def get_feature_names(preprocessor):
     """
-    Sauvegarde les données découpées dans un fichier .joblib unique.
-
-    Le fichier contient un dictionnaire avec les clés :
-      X_train, X_test, y_train, y_test, feature_cols
-
-    Assertion testée : le fichier exporté existe bien sur le disque.
-
-    Retourne
-    --------
-    pathlib.Path vers le fichier sauvegardé.
+    Retourne les noms des features après transformation par le préprocesseur.
+    Utile pour interpréter les modèles downstream.
     """
-    output_dir = pathlib.Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    out_path = output_dir / "processed_data.joblib"
-    joblib.dump(
-        {
-            "X_train": X_train,
-            "X_test": X_test,
-            "y_train": y_train,
-            "y_test": y_test,
-            "feature_cols": list(X_train.columns),
-        },
-        out_path,
-    )
-    assert out_path.exists(), f"Échec de la sauvegarde : {out_path}"
-    return out_path
+    try:
+        return list(preprocessor.get_feature_names_out())
+    except:
+        # Si la méthode n'existe pas, retourne des noms génériques
+        n = preprocessor.transform(pd.DataFrame(columns=preprocessor.feature_names_in_)).shape[1]
+        return [f"feature_{i}" for i in range(n)]
 
 
-# ---------------------------------------------------------------------------
-# Pipeline complet
-# ---------------------------------------------------------------------------
-
-def run_pipeline(
-    raw_path: str | pathlib.Path,
-    output_dir: str | pathlib.Path,
-) -> pathlib.Path:
-    """
-    Enchaîne toutes les étapes du pipeline de traitement des données.
-
-    Paramètres
-    ----------
-    raw_path   : chemin vers data/raw/data_finale.xlsx
-    output_dir : chemin vers data/processed/
-
-    Retourne
-    --------
-    pathlib.Path vers le fichier processed_data.joblib produit.
-    """
-    df_raw      = load_raw_data(raw_path)
-    df_selected = select_columns(df_raw)
-    df_encoded  = encode_binary_columns(df_selected)
-    X, y        = split_features_target(df_encoded)
-    X_train, X_test, y_train, y_test = split_train_test(X, y)
-    out_path    = save_processed_data(X_train, X_test, y_train, y_test, output_dir)
-    return out_path
-
-
-# ---------------------------------------------------------------------------
-# Exécution directe
-# ---------------------------------------------------------------------------
-
-if __name__ == "__main__":
-    _ROOT = pathlib.Path(__file__).resolve().parent.parent
-    raw   = _ROOT / "data" / "raw" / "data_finale.xlsx"
-    out   = _ROOT / "data" / "processed"
-
-    path = run_pipeline(raw, out)
-    print(f"Pipeline terminé → {path}")
+# =====================================================
+# === EXEMPLE D'UTILISATION DU MODULE EN LANCEMENT DIRECT ===
+# =====================================================
+if __name__ == '__main__':
+    # Lance le pipeline complet sur un fichier de données exemple
+    X_train, X_test, y_train, y_test, preproc = load_and_preprocess('data/raw/dataset.xlsx')
+    print(f"Forme X_train transformé : {X_train.shape}")
+    print(f"Valeurs uniques de y_train : {np.unique(y_train)}")
