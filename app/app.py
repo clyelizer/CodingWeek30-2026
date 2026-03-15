@@ -28,7 +28,7 @@ import time
 import base64
 import hashlib
 import hmac
-from datetime import datetime
+from datetime import datetime, UTC
 
 import joblib
 import pandas as pd
@@ -45,7 +45,6 @@ _ROOT = pathlib.Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from src.train_model import load_model
 from src.evaluate_model import (
     predict_proba_safe,
     compute_shap_values,
@@ -90,10 +89,67 @@ _BINARY_COLS = {
 }
 
 
+def _is_predictive_estimator(obj: object) -> bool:
+    """Vérifie le contrat minimal attendu pour la prédiction."""
+    return callable(getattr(obj, "predict", None)) and callable(getattr(obj, "predict_proba", None))
+
+
+def _load_model_artifact(model_dir: pathlib.Path | None = None) -> object:
+    """
+    Charge un modèle sérialisé avec joblib depuis plusieurs noms standards.
+
+    Pourquoi ce loader existe:
+    - L'extension (.pkl/.joblib) ne suffit pas à garantir la compatibilité.
+    - Le format utile dépend surtout de la manière dont l'objet a été sauvegardé.
+    - On valide donc l'objet chargé via son contrat (predict/predict_proba),
+      au lieu de faire un simple renommage de fichier.
+    """
+    model_dir = model_dir or _MODEL_DIR
+    candidate_names = [
+        "random_forest.joblib",
+        "Random_Forest.pkl",
+        "random_forest.pkl",
+        "RandomForest.pkl",
+    ]
+
+    checked_paths: list[str] = []
+    load_errors: list[str] = []
+
+    for name in candidate_names:
+        path = model_dir / name
+        if not path.exists():
+            continue
+
+        checked_paths.append(str(path))
+        try:
+            artifact = joblib.load(path)
+        except Exception as exc:
+            load_errors.append(f"{path.name}: lecture impossible ({exc})")
+            continue
+
+        if _is_predictive_estimator(artifact):
+            return artifact
+
+        load_errors.append(
+            f"{path.name}: objet chargé invalide (predict/predict_proba absents)"
+        )
+
+    if not checked_paths:
+        raise FileNotFoundError(
+            "Aucun artefact modèle trouvé dans "
+            f"{model_dir}. Noms testés: {candidate_names}"
+        )
+
+    raise TypeError(
+        "Artefacts trouvés mais non exploitables pour la prédiction. "
+        f"Fichiers testés: {checked_paths}. Détails: {load_errors}"
+    )
+
+
 def _load_resources() -> None:
     """Charge le modèle RF et les médianes du test set comme valeurs par défaut."""
     global _model, _feature_cols, _defaults
-    _model = load_model(_MODEL_DIR / "random_forest.joblib")
+    _model = _load_model_artifact(_MODEL_DIR)
     processed = joblib.load(_DATA_DIR / "processed_data.joblib")
     _feature_cols = processed["feature_cols"]
     _defaults = processed["X_test"].median().to_dict()
@@ -247,7 +303,7 @@ def _save_record(record: dict) -> None:
     """Sauve une analyse dans la base de données."""
     _init_db()
     record = dict(record)
-    record.setdefault("created_at", datetime.utcnow().isoformat())
+    record.setdefault("created_at", datetime.now(UTC).isoformat())
 
     fields = [
         "created_at",
@@ -370,10 +426,9 @@ def _build_input_row(form_data: dict) -> pd.DataFrame:
 async def read_root(request: Request) -> HTMLResponse:
     """Affiche la page d'accueil."""
     return templates.TemplateResponse(
-        "home.html",
-        {
-            "request": request,
-        },
+        request,
+        "landing_page.html",
+        {},
     )
 
 
@@ -384,10 +439,9 @@ async def login_page(request: Request) -> HTMLResponse:
         return RedirectResponse("/form", status_code=303)
 
     return templates.TemplateResponse(
+        request,
         "auth.html",
-        {
-            "request": request,
-        },
+        {},
     )
 
 
@@ -397,9 +451,9 @@ async def login(request: Request, username: str = Form(...), password: str = For
     user = _get_user(username)
     if not user or not _verify_password(password, user.get("password_hash", "")):
         return templates.TemplateResponse(
+            request,
             "auth.html",
             {
-                "request": request,
                 "error": "Identifiant ou mot de passe incorrect.",
             },
             status_code=401,
@@ -427,9 +481,9 @@ async def read_form(request: Request) -> HTMLResponse:
         return RedirectResponse("/login", status_code=303)
 
     return templates.TemplateResponse(
+        request,
         "diagnosis_console.html",
         {
-            "request": request,
             "defaults": _defaults,
             "user": user,
         },
@@ -488,9 +542,9 @@ async def predict(
         print(f"SHAP error (non-fatal): {exc}")
 
     return templates.TemplateResponse(
+        request,
         "diagnosis_console.html",
         {
-            "request": request,
             "prob": f"{prob * 100:.1f}",
             "decision": decision,
             "risk_class": risk_class,

@@ -409,6 +409,7 @@ const formElement = document.getElementById('diagnostic-form');
 const previewContent = document.getElementById('preview-content');
 
 let lastAnalysis = null;
+let lastReport = null;
 
 // Real-time form validation and preview
 function updatePreview() {
@@ -455,7 +456,7 @@ function updatePreview() {
     `;
 
     // Send data for real-time analysis
-    fetch('/predict', {
+    fetch('/api/predict', {
         method: 'POST',
         body: formData
     })
@@ -467,6 +468,10 @@ function updatePreview() {
         if (!result) return;
 
         lastAnalysis = result;
+        lastReport = {
+            ...Object.fromEntries(formData.entries()),
+            ...result,
+        };
         displayPreview(result);
     })
     .catch(() => {
@@ -531,7 +536,6 @@ function displayPreview(data) {
         `}
     `;
 }
-    }
 
 function handleAuthError(response) {
     if (response.status === 401) {
@@ -541,18 +545,50 @@ function handleAuthError(response) {
     return false;
 }
 
-// Add event listeners for real-time updates
-document.addEventListener('DOMContentLoaded', function() {
-    // Add input event listeners to all form fields
-    const inputs = formElement.querySelectorAll('input, select');
-    inputs.forEach(input => {
-        input.addEventListener('input', debounce(updatePreview, 500));
-        input.addEventListener('change', debounce(updatePreview, 200));
-    });
+function renderHistory(records) {
+    if (!records.length) {
+        previewContent.innerHTML = `
+            <div class="alert alert-info text-center mb-0">
+                Aucun historique disponible.
+            </div>
+        `;
+        return;
+    }
 
-    // Initial preview update
-    updatePreview();
-});
+    const rows = records.map(r => `
+        <tr>
+            <td>${r.created_at ?? '-'}</td>
+            <td>${r.prob ?? '-'}%</td>
+            <td><span class="badge bg-${r.risk_class === 'danger' ? 'danger' : 'success'}">${r.decision ?? '-'}</span></td>
+        </tr>
+    `).join('');
+
+    previewContent.innerHTML = `
+        <h6 class="mb-3" style="color:#005A9C;">Historique des analyses</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Probabilité</th>
+                        <th>Décision</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+async function loadHistory() {
+    const response = await fetch('/api/history?limit=20');
+    if (handleAuthError(response)) return;
+    if (!response.ok) {
+        throw new Error('history load failed');
+    }
+    const payload = await response.json();
+    renderHistory(payload.records || []);
+}
 
 // Debounce function to limit API calls
 function debounce(func, wait) {
@@ -567,39 +603,8 @@ function debounce(func, wait) {
     };
 }
 
-function setActiveTab(tab) {
-    tabResults.classList.remove('active');
-    tabHistory.classList.remove('active');
-    resultView.classList.add('d-none');
-    historyView.classList.add('d-none');
-
-    if (tab === 'results') {
-        tabResults.classList.add('active');
-        resultView.classList.remove('d-none');
-    } else {
-        tabHistory.classList.add('active');
-        historyView.classList.remove('d-none');
-    }
-}
-
-function handleAuthError(response) {
-    if (response.status === 401) {
-        window.location.href = '/login';
-        return true;
-    }
-    return false;
-}
-
-formElement.addEventListener('submit', function(e) {
-    e.preventDefault();
-
-    if (!lastAnalysis) {
-        alert('Veuillez attendre que l\'analyse soit terminée.');
-        return;
-    }
-
-    // Show detailed results in a modal
-    showDetailedResults(lastAnalysis);
+formElement.addEventListener('submit', function() {
+    // Let the normal /predict HTML flow happen.
 });
 
 function buildReportHtml(data) {
@@ -745,12 +750,49 @@ document.getElementById('nav-about').addEventListener('click', () => {
     modal.show();
 });
 
+document.getElementById('nav-logout').addEventListener('click', logout);
+
+document.getElementById('nav-new').addEventListener('click', () => {
+    formElement.reset();
+    lastAnalysis = null;
+    lastReport = null;
+    previewContent.innerHTML = `
+        <div class="text-center text-muted">
+            <i class="fas fa-chart-line fa-3x mb-3" style="color: #6B7280;"></i>
+            <p>Remplissez le formulaire pour voir l'analyse en temps réel</p>
+            <small>Le score de risque et l'explication SHAP apparaîtront ici</small>
+        </div>
+    `;
+});
+
+document.getElementById('nav-history').addEventListener('click', async () => {
+    try {
+        await loadHistory();
+    } catch {
+        previewContent.innerHTML = `
+            <div class="alert alert-warning text-center mb-0">
+                Impossible de charger l'historique.
+            </div>
+        `;
+    }
+});
+
 document.getElementById('nav-pdf').addEventListener('click', () => {
     if (!lastAnalysis) {
         alert('Veuillez réaliser une analyse avant d\'exporter le rapport.');
         return;
     }
     generatePdf();
+});
+
+// Add event listeners for real-time updates
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = formElement.querySelectorAll('input, select');
+    inputs.forEach(input => {
+        input.addEventListener('input', debounce(updatePreview, 500));
+        input.addEventListener('change', debounce(updatePreview, 200));
+    });
+    updatePreview();
 });
 </script>
 
@@ -925,4 +967,3 @@ document.getElementById('nav-pdf').addEventListener('click', () => {
 
 </body>
 </html>
-<parameter name="filePath">c:\Users\sanmo\Downloads\CodingWeek30-2026-main\CodingWeek30-2026-main\app\templates\combined.html

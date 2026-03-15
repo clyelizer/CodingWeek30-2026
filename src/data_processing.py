@@ -134,7 +134,7 @@ def optimize_memory(df):
                 df[col] = df[col].astype(np.float32)
 
     # === Conversion des colonnes texte en 'category' si peu de modalités ===
-    text_cols = df.select_dtypes(include=['object', 'string', 'str']).columns
+    text_cols = df.select_dtypes(include=['object', 'string']).columns
     for col in text_cols:
         if df[col].nunique() / len(df) <= 0.5:
             df[col] = df[col].astype('category')

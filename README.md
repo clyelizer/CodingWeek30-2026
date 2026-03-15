@@ -88,6 +88,8 @@ dans 92.87% des cas.
 
 ## Installation
 
+Python recommande : **3.11.x** (version cible du projet pour minimiser les incompatibilites binaires).
+
 ```bash
 pip install -r requirements.txt
 ```

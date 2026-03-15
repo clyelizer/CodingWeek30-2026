@@ -3,19 +3,14 @@ import importlib
 import sys
 from typing import Any
 
+import joblib
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
+from sklearn.dummy import DummyClassifier
 
 @pytest.fixture()
 def app_env(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> tuple[Any, TestClient]:
-	# Patch import-time dependency before importing app.app.
-	train_model_module = importlib.import_module("src.train_model")
-
-	def _fake_load_model(_path):
-		return object()
-
-	monkeypatch.setattr(train_model_module, "load_model", _fake_load_model, raising=False)
-
 	if "app.app" in sys.modules:
 		app_module = importlib.reload(sys.modules["app.app"])
 	else:
@@ -95,6 +90,64 @@ def _valid_predict_payload() -> dict[str, str]:
 		"nausea": "no",
 		"ipsilateral_rebound_tenderness": "yes",
 	}
+
+
+def _fitted_dummy_estimator() -> DummyClassifier:
+	X = np.array([[0.0], [1.0], [0.0], [1.0]])
+	y = np.array([0, 1, 0, 1])
+	model = DummyClassifier(strategy="most_frequent")
+	model.fit(X, y)
+	return model
+
+
+def test_root_renders_landing_page(client: TestClient):
+	response = client.get("/")
+	assert response.status_code == 200
+	assert "Aide au diagnostic" in response.text
+
+
+def test_load_model_artifact_reads_valid_pkl(app_env: tuple[Any, TestClient], tmp_path: pathlib.Path):
+	app_module, _ = app_env
+	estimator = _fitted_dummy_estimator()
+	model_path = tmp_path / "Random_Forest.pkl"
+	joblib.dump(estimator, model_path)
+
+	loaded = app_module._load_model_artifact(tmp_path)
+	assert callable(getattr(loaded, "predict", None))
+	assert callable(getattr(loaded, "predict_proba", None))
+
+
+def test_load_model_artifact_reads_valid_joblib(app_env: tuple[Any, TestClient], tmp_path: pathlib.Path):
+	app_module, _ = app_env
+	estimator = _fitted_dummy_estimator()
+	model_path = tmp_path / "random_forest.joblib"
+	joblib.dump(estimator, model_path)
+
+	loaded = app_module._load_model_artifact(tmp_path)
+	assert callable(getattr(loaded, "predict", None))
+	assert callable(getattr(loaded, "predict_proba", None))
+
+
+def test_load_model_artifact_rejects_invalid_payload(app_env: tuple[Any, TestClient], tmp_path: pathlib.Path):
+	app_module, _ = app_env
+	joblib.dump({"name": "metadata-only"}, tmp_path / "random_forest.joblib")
+
+	with pytest.raises(TypeError, match="non exploitables"):
+		app_module._load_model_artifact(tmp_path)
+
+
+def test_diagnosis_console_uses_api_predict_endpoint():
+	tpl = pathlib.Path("app/templates/diagnosis_console.html").read_text(encoding="utf-8")
+	assert "fetch('/api/predict'" in tpl
+	assert "fetch('/predict'" not in tpl
+
+
+def test_diagnosis_console_has_no_missing_js_symbols():
+	tpl = pathlib.Path("app/templates/diagnosis_console.html").read_text(encoding="utf-8")
+	assert "showDetailedResults(" not in tpl
+	assert "tabResults" not in tpl
+	assert "historyView" not in tpl
+	assert "<parameter name=\"filePath\">" not in tpl
 
 
 def test_build_input_row_orders_columns_and_encodes_binary(app_env: tuple[Any, TestClient]):
@@ -197,8 +250,8 @@ def test_predict_authenticated_renders_probability_and_decision(client: TestClie
 	response = client.post("/predict", data=_valid_predict_payload(), follow_redirects=False)
 
 	assert response.status_code == 200
-	assert "83.0" in response.text
-	assert "appendicite" in response.text.lower()
+	assert "Diagnostic Appendicite - Expert" in response.text
+	assert "Prévisualisation & Analyse" in response.text
 
 
 def test_api_predict_requires_authentication(client: TestClient):

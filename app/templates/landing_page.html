@@ -32,6 +32,20 @@
       --font-mono:  'JetBrains Mono', monospace;
     }
 
+    body[data-theme='light'] {
+      --navy:       #eef3fb;
+      --navy-2:     #f6f9ff;
+      --navy-3:     #dde7f7;
+      --teal:       #0b8f7c;
+      --teal-2:     #06695d;
+      --teal-glow:  rgba(11, 143, 124, 0.15);
+      --blue:       #285fb6;
+      --white:      #10213e;
+      --muted:      #4b6084;
+      --border:     rgba(16,33,62,0.12);
+      --card-bg:    rgba(255,255,255,0.78);
+    }
+
     /* ═══════════════════════════════════════════════════════
        RESET & BASE
     ══════════════════════════════════════════════════════════ */
@@ -40,10 +54,18 @@
 
     body {
       font-family: var(--font-body);
-      background: var(--navy);
+      background:
+        linear-gradient(rgba(5,13,26,.84), rgba(5,13,26,.84)),
+        url('/static/back.jpeg') center / cover fixed no-repeat;
       color: var(--white);
       line-height: 1.65;
       overflow-x: hidden;
+    }
+
+    body[data-theme='light'] {
+      background:
+        linear-gradient(rgba(255,255,255,.82), rgba(255,255,255,.82)),
+        url('/static/back.jpeg') center / cover fixed no-repeat;
     }
 
     /* ─── GLOBAL NOISE GRAIN ──────────────────────────────── */
@@ -161,6 +183,11 @@
       -webkit-backdrop-filter: blur(20px);
     }
 
+    body[data-theme='light'] nav {
+      background: rgba(246,249,255,.9);
+      border-bottom: 1px solid rgba(16,33,62,0.15);
+    }
+
     .nav-inner {
       display: flex; align-items: center;
       justify-content: space-between;
@@ -186,7 +213,34 @@
     }
     .nav-links a:hover { color: var(--white); }
 
+    body[data-theme='light'] .nav-links a:hover {
+      color: #10213e;
+    }
+
     .nav-cta { display: flex; gap: 12px; align-items: center; }
+
+    .theme-toggle {
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: rgba(255,255,255,.06);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: .78rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .theme-toggle:hover {
+      color: var(--white);
+      border-color: var(--teal);
+      background: var(--teal-glow);
+    }
+
+    body[data-theme='light'] .theme-toggle:hover {
+      color: #10213e;
+    }
 
     /* mobile nav toggle */
     .nav-toggle {
@@ -990,9 +1044,9 @@
     </ul>
 
     <div class="nav-cta">
-      <a href="/docs" class="btn btn-ghost" style="padding:10px 20px; font-size:.82rem;">Documentation</a>
-      <a href="/" class="btn btn-primary" style="padding:10px 22px; font-size:.82rem;">Lancer l'outil ↗</a>
+      <button id="theme-toggle" type="button" class="theme-toggle" aria-label="Activer le mode clair">Clair</button>
     </div>
+
 
     <button class="nav-toggle" aria-label="Menu" onclick="toggleMenu()">
       <span></span><span></span><span></span>
@@ -1038,46 +1092,6 @@
       <div class="orb orb-1"></div>
       <div class="orb orb-2"></div>
 
-      <div class="card clinical-card">
-        <div class="clinical-card-header">
-          <div class="patient-avatar">👦</div>
-          <div class="patient-info">
-            <strong>Patient · 9 ans</strong>
-            <span>Urgences pédiatriques</span>
-          </div>
-          <span class="clinical-badge">URGENT</span>
-        </div>
-
-        <div class="param-row">
-          <span class="param-name">Douleur FID</span>
-          <span class="param-val alert-high">Oui</span>
-        </div>
-        <div class="param-row">
-          <span class="param-name">Douleur migratoire</span>
-          <span class="param-val alert-high">Oui</span>
-        </div>
-        <div class="param-row">
-          <span class="param-name">WBC</span>
-          <span class="param-val alert-high">14.2 G/L</span>
-        </div>
-        <div class="param-row">
-          <span class="param-name">CRP</span>
-          <span class="param-val alert-med">38 mg/L</span>
-        </div>
-        <div class="param-row">
-          <span class="param-name">Diamètre appendice</span>
-          <span class="param-val alert-high">9.1 mm</span>
-        </div>
-        <div class="param-row">
-          <span class="param-name">Température</span>
-          <span class="param-val alert-med">37.9 °C</span>
-        </div>
-
-        <div class="result-bar">
-          <div class="result-pct">87.4%</div>
-          <div class="result-label">Probabilité d'appendicite</div>
-        </div>
-      </div>
     </div>
 
   </div>
@@ -1650,7 +1664,9 @@
       links.style.flexDirection = 'column';
       links.style.position = 'absolute';
       links.style.top = '64px'; links.style.left = '0'; links.style.right = '0';
-      links.style.background = 'rgba(5,13,26,.97)';
+      links.style.background = document.body.getAttribute('data-theme') === 'light'
+        ? 'rgba(246,249,255,.98)'
+        : 'rgba(5,13,26,.97)';
       links.style.padding = '16px 24px';
       links.style.borderBottom = '1px solid rgba(255,255,255,.07)';
       if (!isVisible && cta) {
@@ -1658,7 +1674,9 @@
         cta.style.flexDirection = 'column';
         cta.style.position = 'absolute';
         cta.style.top = '64px'; cta.style.left = '0'; cta.style.right = '0';
-        cta.style.background = 'rgba(5,13,26,.97)';
+        cta.style.background = document.body.getAttribute('data-theme') === 'light'
+          ? 'rgba(246,249,255,.98)'
+          : 'rgba(5,13,26,.97)';
         cta.style.padding = '0 24px 20px';
         cta.style.top = 'auto';
       }
@@ -1698,6 +1716,26 @@
     }
   }, { threshold: 0.5 });
   statsObserver.observe(statsSection);
+
+  /* ── Theme toggle (clair/sombre) ───────────────────── */
+  const themeToggle = document.getElementById('theme-toggle');
+  const THEME_KEY = 'pedi_theme';
+
+  function applyTheme(theme) {
+    const isLight = theme === 'light';
+    document.body.setAttribute('data-theme', isLight ? 'light' : 'dark');
+    themeToggle.textContent = isLight ? 'Sombre' : 'Clair';
+    themeToggle.setAttribute('aria-label', isLight ? 'Activer le mode sombre' : 'Activer le mode clair');
+  }
+
+  const storedTheme = localStorage.getItem(THEME_KEY);
+  applyTheme(storedTheme === 'light' ? 'light' : 'dark');
+
+  themeToggle.addEventListener('click', () => {
+    const nextTheme = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    localStorage.setItem(THEME_KEY, nextTheme);
+    applyTheme(nextTheme);
+  });
 </script>
 
 </body>
