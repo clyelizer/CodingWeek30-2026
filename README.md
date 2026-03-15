@@ -19,6 +19,21 @@ le jeu de test). Dataset : Regensburg Pediatric Appendicitis (UCI), n≈776.
 
 ---
 
+## Liens internes vers sections clés (MD/)
+
+- Pipeline de traitement — [01 — Pipeline de traitement des données](MD/01_data_processing.md)
+  - Contexte, EDA, imputation, optimize_memory, pipeline `ColumnTransformer`
+- Entraînement & sélection — [02 — Entraînement et sélection des modèles](MD/02_train_model.md)
+  - Pipelines sklearn, modèles candidats, sélection par AUC, sauvegarde des modèles
+- Évaluation individuelle & SHAP — [03 — Évaluation individuelle et explications SHAP](MD/03_evaluate_model.md)
+  - `predict_proba_safe`, `compute_shap_values`, génération du waterfall (PNG base64)
+- Interface Web (FastAPI) — [04 — Interface Web (FastAPI + SHAP)](MD/04_webapp.md)
+  - Endpoints `/`, `/login`, `/form`, `/predict`, chargement singleton du modèle, comportement SHAP non-fatal
+
+> Remarque : pour accéder directement à une section précise dans un fichier MD,
+> utilisez l'index correspondant dans `MD/README.md` ou ouvrez le fichier MD et
+> recherchez le titre de section souhaité (navigateur/éditeur prend en charge la recherche rapide).
+
 ## Arborescence clé
 
 ```
