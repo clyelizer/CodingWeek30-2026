@@ -160,12 +160,115 @@ def get_feature_names(preprocessor):
         n = preprocessor.transform(pd.DataFrame(columns=preprocessor.feature_names_in_)).shape[1]
         return [f"feature_{i}" for i in range(n)]
 
+# =====================================================
+# === FONCTION : SAUVEGARDE DES DONNÉES TRAITÉES ===
+# =====================================================
+def save_processed_data(X_train, X_test, y_train, y_test, feature_cols, output_path='data/processed/processed_data.joblib'):
+    """
+    Sauvegarde les données d'entraînement et de test traitées dans un fichier joblib.
+    
+    Paramètres:
+    -----------
+    X_train : array transformed
+        Features d'entraînement transformées
+    X_test : array transformed
+        Features de test transformées
+    y_train : Series
+        Cible d'entraînement
+    y_test : Series
+        Cible de test
+    feature_cols : list
+        Noms des features après transformation
+    output_path : str
+        Chemin de sauvegarde du fichier joblib
+    """
+    os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
+    
+    processed_data = {
+        'X_train': X_train,
+        'X_test': X_test,
+        'y_train': y_train,
+        'y_test': y_test,
+        'feature_cols': feature_cols,
+        'X_train_shape': X_train.shape,
+        'X_test_shape': X_test.shape,
+        'n_samples_train': len(y_train),
+        'n_samples_test': len(y_test)
+    }
+    
+    joblib.dump(processed_data, output_path)
+    print(f"✅ Données traitées sauvegardées → {output_path}")
+    print(f"   Taille X_train : {X_train.shape}")
+    print(f"   Taille X_test  : {X_test.shape}")
+    print(f"   Features : {len(feature_cols)}")
+
+# =====================================================
+# === FONCTION : PIPELINE COMPLET - ORCHESTRATION ===
+# =====================================================
+def run_pipeline(raw_data_path='data/raw/dataset.xlsx', target_col='Diagnosis'):
+    """
+    Lance le pipeline complet de traitement des données :
+    1. Chargement et prétraitement
+    2. Récupération des noms de features
+    3. Sauvegarde des données traitées et du préprocesseur
+    
+    Retour:
+    -------
+    dict : Dictionnaire avec les données traitées et métadonnées
+    """
+    print("\n" + "="*70)
+    print(" PIPELINE DE TRAITEMENT DES DONNÉES - APPENDICITE PÉDIATRIQUE")
+    print("="*70 + "\n")
+    
+    # Étape 1 : Chargement et prétraitement
+    print("[1/3] Chargement et prétraitement des données...")
+    X_train, X_test, y_train, y_test, preprocessor = load_and_preprocess(
+        raw_data_path, 
+        target_col=target_col
+    )
+    
+    # Étape 2 : Récupération des noms de features
+    print("\n[2/3] Récupération des noms de features...")
+    feature_cols = get_feature_names(preprocessor)
+    print(f"✅ {len(feature_cols)} features identifiées")
+    
+    # Étape 3 : Sauvegarde des données traitées
+    print("\n[3/3] Sauvegarde des données traitées...")
+    save_processed_data(
+        X_train, X_test, y_train, y_test, feature_cols,
+        output_path='data/processed/processed_data.joblib'
+    )
+    
+    print("\n" + "="*70)
+    print(" ✅ PIPELINE COMPLÉTÉ AVEC SUCCÈS")
+    print("="*70 + "\n")
+    
+    # Retour des métadonnées
+    return {
+        'X_train': X_train,
+        'X_test': X_test,
+        'y_train': y_train,
+        'y_test': y_test,
+        'preprocessor': preprocessor,
+        'feature_cols': feature_cols,
+        'n_features': len(feature_cols),
+        'n_samples_train': len(y_train),
+        'n_samples_test': len(y_test)
+    }
 
 # =====================================================
 # === EXEMPLE D'UTILISATION DU MODULE EN LANCEMENT DIRECT ===
 # =====================================================
 if __name__ == '__main__':
-    # Lance le pipeline complet sur un fichier de données exemple
-    X_train, X_test, y_train, y_test, preproc = load_and_preprocess('data/raw/dataset.xlsx')
-    print(f"Forme X_train transformé : {X_train.shape}")
-    print(f"Valeurs uniques de y_train : {np.unique(y_train)}")
+    # Lance le pipeline complet et sauvegarde les résultats
+    results = run_pipeline(
+        raw_data_path='data/raw/dataset.xlsx',
+        target_col='Diagnosis'
+    )
+    
+    print("\n📊 RÉSUMÉ DU PIPELINE :")
+    print(f"   • Données d'entraînement : {results['X_train'].shape}")
+    print(f"   • Données de test : {results['X_test'].shape}")
+    print(f"   • Features : {results['n_features']}")
+    print(f"   • Distribution train : {len(results['y_train'])} échantillons")
+    print(f"   • Distribution test : {len(results['y_test'])} échantillons")
