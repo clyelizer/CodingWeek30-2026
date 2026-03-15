@@ -8,22 +8,39 @@ import pandas as pd
 import joblib
 import pytest
 
+
+def _load_predictive_model(models_dir='models'):
+    """Charge un artefact modèle compatible predict/predict_proba depuis models/."""
+    candidates = [
+        f for f in os.listdir(models_dir)
+        if f.endswith('.pkl') and f != 'preprocessor.pkl'
+    ]
+
+    checked = []
+    for filename in sorted(candidates):
+        path = os.path.join(models_dir, filename)
+        obj = joblib.load(path)
+        checked.append(filename)
+        if hasattr(obj, 'predict') and hasattr(obj, 'predict_proba'):
+            return obj, filename
+
+    raise AssertionError(
+        f"Aucun estimateur prédictif trouvé dans {models_dir}. Fichiers vérifiés: {checked}"
+    )
+
 def test_model_loading():
     """Vérifie que le modèle et le préprocesseur existent et se chargent."""
     assert os.path.exists('models/preprocessor.pkl'), "preprocessor.pkl manquant"
-    model_files = [f for f in os.listdir('models') if f.endswith('.pkl') and f != 'preprocessor.pkl']
-    assert len(model_files) > 0, "Aucun modèle trouvé dans models/"
-    model = joblib.load(os.path.join('models', model_files[0]))
+    model, model_file = _load_predictive_model('models')
     preprocessor = joblib.load('models/preprocessor.pkl')
+    assert model_file.endswith('.pkl')
     assert model is not None
     assert preprocessor is not None
 
 def test_model_prediction():
     """Teste une prédiction sur une entrée factice."""
     preprocessor = joblib.load('models/preprocessor.pkl')
-    model_files = [f for f in os.listdir('models') if f.endswith('.pkl') and f != 'preprocessor.pkl']
-    assert len(model_files) > 0
-    model = joblib.load(os.path.join('models', model_files[0]))
+    model, _ = _load_predictive_model('models')
 
     # Créer un exemple à partir du fichier Excel s'il existe
     if os.path.exists('data/raw/dataset.xlsx'):

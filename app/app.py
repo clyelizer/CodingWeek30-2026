@@ -384,7 +384,7 @@ async def login_page(request: Request) -> HTMLResponse:
         return RedirectResponse("/form", status_code=303)
 
     return templates.TemplateResponse(
-        "login.html",
+        "auth.html",
         {
             "request": request,
         },
@@ -397,7 +397,7 @@ async def login(request: Request, username: str = Form(...), password: str = For
     user = _get_user(username)
     if not user or not _verify_password(password, user.get("password_hash", "")):
         return templates.TemplateResponse(
-            "login.html",
+            "auth.html",
             {
                 "request": request,
                 "error": "Identifiant ou mot de passe incorrect.",
@@ -427,7 +427,7 @@ async def read_form(request: Request) -> HTMLResponse:
         return RedirectResponse("/login", status_code=303)
 
     return templates.TemplateResponse(
-        "combined.html",
+        "diagnosis_console.html",
         {
             "request": request,
             "defaults": _defaults,
@@ -488,7 +488,7 @@ async def predict(
         print(f"SHAP error (non-fatal): {exc}")
 
     return templates.TemplateResponse(
-        "combined.html",
+        "diagnosis_console.html",
         {
             "request": request,
             "prob": f"{prob * 100:.1f}",

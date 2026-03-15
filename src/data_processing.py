@@ -14,6 +14,85 @@ from sklearn.pipeline import Pipeline
 import joblib
 import os
 
+
+def read_dataset(filepath):
+    """Lit un dataset CSV ou Excel selon son extension."""
+    ext = os.path.splitext(filepath)[1].lower()
+    if ext in ('.xlsx', '.xls'):
+        return pd.read_excel(filepath)
+    return pd.read_csv(filepath)
+
+
+def validate_target_column(df, target_col):
+    """Valide la présence de la colonne cible."""
+    if target_col not in df.columns:
+        raise ValueError(f"Colonne cible '{target_col}' introuvable. Colonnes : {df.columns.tolist()}")
+
+
+def split_features_target(df, target_col):
+    """Sépare les features et la cible."""
+    X = df.drop(columns=[target_col])
+    y = df[target_col].copy()
+    return X, y
+
+
+def validate_binary_numeric_target(y):
+    """Vérifie que la cible est numérique."""
+    if not pd.api.types.is_numeric_dtype(y):
+        raise ValueError("La cible doit être numérique (0/1).")
+
+
+def infer_feature_groups(X, numeric_reference=None, categorical_reference=None):
+    """Construit les groupes de colonnes numériques et catégorielles."""
+    numeric_reference = numeric_reference or NUMERIC_FEATURES
+    categorical_reference = categorical_reference or CATEGORICAL_FEATURES
+
+    numeric_features = [col for col in numeric_reference if col in X.columns]
+    categorical_features = [col for col in categorical_reference if col in X.columns]
+    other_cols = [col for col in X.columns if col not in numeric_features and col not in categorical_features]
+    if other_cols:
+        categorical_features.extend(other_cols)
+
+    return numeric_features, categorical_features, other_cols
+
+
+def build_numeric_pipeline():
+    """Pipeline pour colonnes numériques."""
+    return Pipeline([
+        ('imputer', SimpleImputer(strategy='median')),
+        ('scaler', StandardScaler())
+    ])
+
+
+def build_categorical_pipeline():
+    """Pipeline pour colonnes catégorielles."""
+    return Pipeline([
+        ('imputer', SimpleImputer(strategy='most_frequent')),
+        ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
+    ])
+
+
+def build_preprocessor(numeric_features, categorical_features):
+    """Assemble les pipelines dans un ColumnTransformer."""
+    transformers = []
+    if numeric_features:
+        transformers.append(('num', build_numeric_pipeline(), numeric_features))
+    if categorical_features:
+        transformers.append(('cat', build_categorical_pipeline(), categorical_features))
+    return ColumnTransformer(transformers=transformers, remainder='drop')
+
+
+def split_train_test(X, y, test_size=0.2, random_state=42):
+    """Découpe train/test avec stratification."""
+    return train_test_split(X, y, test_size=test_size, random_state=random_state, stratify=y)
+
+
+def fit_transform_datasets(preprocessor, X_train, X_test):
+    """Apprend le préprocesseur sur train et transforme train/test."""
+    X_train_processed = preprocessor.fit_transform(X_train)
+    X_test_processed = preprocessor.transform(X_test)
+    return X_train_processed, X_test_processed
+
 # =====================================================
 # === LISTES DES COLONNES NUMÉRIQUES & CATÉGORIELLES ===
 # =====================================================
@@ -54,9 +133,10 @@ def optimize_memory(df):
             if np.finfo(np.float32).min <= c_min and c_max <= np.finfo(np.float32).max:
                 df[col] = df[col].astype(np.float32)
 
-    # === Conversion des colonnes 'object' en 'category' si peu de modalités ===
-    for col in df.select_dtypes(include='object').columns:
-        if df[col].nunique() / len(df) < 0.5:
+    # === Conversion des colonnes texte en 'category' si peu de modalités ===
+    text_cols = df.select_dtypes(include=['object', 'string', 'str']).columns
+    for col in text_cols:
+        if df[col].nunique() / len(df) <= 0.5:
             df[col] = df[col].astype('category')
 
     after = df.memory_usage(deep=True).sum() / 1024**2
@@ -71,72 +151,48 @@ def load_and_preprocess(filepath, target_col='Diagnosis', test_size=0.2, random_
     Charge le fichier de données, optimise la mémoire, sépare les features et la cible,
     divise en train/test et crée un pipeline de prétraitement adapté.
     """
-    # === Détection de l'extension pour choisir la méthode de chargement ===
-    ext = os.path.splitext(filepath)[1].lower()
-    if ext in ('.xlsx', '.xls'):
-        df = pd.read_excel(filepath)
-    else:
-        df = pd.read_csv(filepath)
+    # === Lecture du dataset ===
+    df = read_dataset(filepath)
     print(f"Dataset chargé : {df.shape[0]} lignes × {df.shape[1]} colonnes")
 
     # === Vérification de la présence de la colonne cible ===
-    if target_col not in df.columns:
-        raise ValueError(f"Colonne cible '{target_col}' introuvable. Colonnes : {df.columns.tolist()}")
+    validate_target_column(df, target_col)
 
     # === Séparation features/cible ===
-    X = df.drop(columns=[target_col])
-    y = df[target_col].copy()
+    X, y = split_features_target(df, target_col)
 
     # === Vérification que la cible est bien numérique (0/1) ===
-    if not pd.api.types.is_numeric_dtype(y):
-        raise ValueError("La cible doit être numérique (0/1).")
+    validate_binary_numeric_target(y)
 
     # === Optimisation mémoire sur les features ===
     X = optimize_memory(X)
 
     # === Identification des colonnes numériques et catégorielles présentes dans X ===
-    numeric_features = [col for col in NUMERIC_FEATURES if col in X.columns]
-    categorical_features = [col for col in CATEGORICAL_FEATURES if col in X.columns]
-
-    # === Colonnes non listées → ajoutées comme catégorielles (sécurité) ===
-    other_cols = [col for col in X.columns if col not in numeric_features and col not in categorical_features]
+    numeric_features, categorical_features, other_cols = infer_feature_groups(
+        X,
+        numeric_reference=NUMERIC_FEATURES,
+        categorical_reference=CATEGORICAL_FEATURES
+    )
     if other_cols:
         print(f"Colonnes non listées (traitées comme catégorielles) : {other_cols}")
-        categorical_features.extend(other_cols)
 
     print(f"  Numériques   ({len(numeric_features)}) : {numeric_features}")
     print(f"  Catégorielles({len(categorical_features)}) : {categorical_features}")
 
     # === Séparation en train/test (stratification sur la cible) ===
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_size, random_state=random_state, stratify=y
+    X_train, X_test, y_train, y_test = split_train_test(
+        X,
+        y,
+        test_size=test_size,
+        random_state=random_state
     )
     print(f"Split → train : {len(X_train)} | test : {len(X_test)}")
 
-    # === Pipeline pour les variables numériques : imputation + standardisation ===
-    numeric_pipe = Pipeline([
-        ('imputer', SimpleImputer(strategy='median')),
-        ('scaler', StandardScaler())
-    ])
-
-    # === Pipeline pour les variables catégorielles : imputation + one-hot encoding ===
-    categorical_pipe = Pipeline([
-        ('imputer', SimpleImputer(strategy='most_frequent')),
-        ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
-    ])
-
     # === Assemblage des pipelines dans un ColumnTransformer ===
-    transformers = []
-    if numeric_features:
-        transformers.append(('num', numeric_pipe, numeric_features))
-    if categorical_features:
-        transformers.append(('cat', categorical_pipe, categorical_features))
-
-    preprocessor = ColumnTransformer(transformers=transformers, remainder='drop')
+    preprocessor = build_preprocessor(numeric_features, categorical_features)
 
     # === Apprentissage du préprocesseur sur le train et transformation des deux jeux ===
-    X_train_processed = preprocessor.fit_transform(X_train)
-    X_test_processed = preprocessor.transform(X_test)
+    X_train_processed, X_test_processed = fit_transform_datasets(preprocessor, X_train, X_test)
 
     # === Sauvegarde du préprocesseur pour réutilisation future ===
     os.makedirs('models', exist_ok=True)
@@ -155,7 +211,7 @@ def get_feature_names(preprocessor):
     """
     try:
         return list(preprocessor.get_feature_names_out())
-    except:
+    except Exception:
         # Si la méthode n'existe pas, retourne des noms génériques
         n = preprocessor.transform(pd.DataFrame(columns=preprocessor.feature_names_in_)).shape[1]
         return [f"feature_{i}" for i in range(n)]

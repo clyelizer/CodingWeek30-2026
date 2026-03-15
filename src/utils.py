@@ -22,8 +22,12 @@ def ensure_dirs(*paths: str):
     for p in paths:
         os.makedirs(p, exist_ok=True)
 
+
+def format_section(title: str, width: int = 55) -> str:
+    """Construit un titre de section formaté."""
+    line = '─' * width
+    return f"\n{line}\n  {title}\n{line}"
+
 def print_section(title: str, width: int = 55):
     """Affiche un titre de section formaté."""
-    print(f"\n{'─' * width}")
-    print(f"  {title}")
-    print(f"{'─' * width}")
+    print(format_section(title, width))
