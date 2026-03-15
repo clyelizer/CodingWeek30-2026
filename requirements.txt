@@ -10,24 +10,11 @@ python-multipart==0.0.22
 pydantic
 
 # ML & Data
-joblib
 pandas
 scikit-learn
 shap
 matplotlib
 
-pydantic
-joblib
-pandas
-scikit-learn
-shap
-matplotlib
-
-# Machine Learning
-scikit-learn==1.8.0
-joblib==1.5.1
-
-# Data
 pandas==3.0.1
 numpy==2.4.2
 openpyxl>=3.1.0        # lecture .xlsx
