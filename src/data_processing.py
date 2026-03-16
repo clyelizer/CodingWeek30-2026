@@ -1,27 +1,63 @@
 """
 src/data_processing.py
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.impute import SimpleImputer
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-import joblib
-import os
+======================
+Pipeline de préparation des données — diagnostic pédiatrique de l'appendicite.
 
-# =====================================================
-# === LISTES DES COLONNES NUMÉRIQUES & CATÉGORIELLES ===
-# =====================================================
-NUMERIC_FEATURES = [
-    'Age', 'BMI', 'Appendix_Diameter', 'Body_Temperature', 'WBC_Count',
-    'Neutrophil_Percentage', 'Hemoglobin', 'RDW', 'Thrombocyte_Count', 'CRP'
+Paradigme fonctionnel strict :
+  - Une fonction = une tâche précise et testable.
+  - Aucun effet de bord global : chaque fonction prend un DataFrame en entrée
+    et retourne un nouveau DataFrame (pas de mutation en place).
+  - Chaque fonction est couverte par exactement un test unitaire avec une
+    assertion précise.
+
+Étapes du pipeline :
+  1. load_raw_data          → charge le fichier Excel (nettoyé ou brut)
+  2. select_columns         → conserve uniquement les features + la cible
+  3. encode_binary_columns  → encode yes/no → 1/0
+  4. split_features_target  → sépare X et y
+  5. split_train_test       → split stratifié 80/20
+  6. save_processed_data    → exporte les fichiers .joblib dans data/processed/
+"""
+
+from __future__ import annotations
+
+import pathlib
+from typing import Tuple
+
+import pandas as pd
+import joblib
+from sklearn.model_selection import train_test_split
+
+
+# ---------------------------------------------------------------------------
+# Constantes du projet
+# ---------------------------------------------------------------------------
+
+NUMERIC_FEATURES: list[str] = [
+    "Body_Temperature",
+    "WBC_Count",
+    "CRP",
+    "Neutrophil_Percentage",
+    "Appendix_Diameter",
+    "Age",
 ]
 
-CATEGORICAL_FEATURES = [
-    'Sex', 'Appendix_on_US', 'Migratory_Pain', 'Lower_Right_Abd_Pain',
-    'Contralateral_Rebound_Tenderness', 'Coughing_Pain', 'Nausea',
-    'Loss_of_Appetite', 'Ketones_in_Urine', 'RBC_in_Urine', 'WBC_in_Urine',
-    'Dysuria', 'Psoas_Sign', 'Ipsilateral_Rebound_Tenderness', 'US_Performed',
-    'Free_Fluids'
+CATEGORICAL_FEATURES: list[str] = [
+    "Lower_Right_Abd_Pain",
+    "Migratory_Pain",
+    "Ipsilateral_Rebound_Tenderness",
+    "Nausea",
+]
+
+FEATURE_COLS: list[str] = NUMERIC_FEATURES + CATEGORICAL_FEATURES
+TARGET_COL: str = "Diagnosis"
+
+# Colonnes avec des valeurs textuelles "yes"/"no" à encoder en 1/0
+BINARY_COLS: list[str] = [
+    "Lower_Right_Abd_Pain",
+    "Migratory_Pain",
+    "Nausea",
+    "Ipsilateral_Rebound_Tenderness",
 ]
 
 
@@ -77,9 +113,6 @@ def split_features_target(
     assert len(X) == len(y), "X et y ont des longueurs différentes."
     return X, y
 
-    # === Identification des colonnes numériques et catégorielles présentes dans X ===
-    numeric_features = [col for col in NUMERIC_FEATURES if col in X.columns]
-    categorical_features = [col for col in CATEGORICAL_FEATURES if col in X.columns]
 
 def split_train_test(
     X: pd.DataFrame,
