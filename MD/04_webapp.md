@@ -8,17 +8,16 @@ L'application web `app/app.py` a été enrichie pour offrir une expérience util
 
 ## Architecture technique
 
+## Architecture technique
+
 ```
-FastAPI
-  ├── GET  /                 → Page d'accueil (landing_page.html)
-  ├── GET  /login            → Authentification (auth.html)
-  ├── GET  /form             → Console de diagnostic (diagnosis_form.html)
-  ├── POST /api/predict      → Résultat (diagnosis_result.html)
+Streamlit (app/app.py)
 
 Bibliothèques :
-  fastapi + uvicorn  → serveur ASGI
-  Jinja2             → templates HTML
+  streamlit          → interface utilisateur et serveur web
   joblib             → chargement du modèle (.pkl)
+  shap               → explicabilité du modèle
+  matplotlib         → affichage des graphiques SHAP
 ```
 
 ---
@@ -33,26 +32,16 @@ Au démarrage, l'application charge :
 
 ## Flux de traitement
 
-1. **Authentification** (optionnelle selon session).
-2. **Saisie des 10 paramètres** dans la console de diagnostic.
-3. **Prédiction et Explications SHAP** générées en temps réel.
-4. **Affichage du résultat** avec graphique waterfall.
+1. **Saisie des 10 paramètres** via le formulaire interactif de la barre latérale.
+2. **Normalisation des données** via `preprocessor.pkl`.
+3. **Prédiction** lancée au clic sur le bouton "Lancer l'analyse".
+4. **Affichage du résultat** du risque (Très faible à Élevé).
+5. **Génération des Explications SHAP** et affichage du graphique waterfall approprié à la classe prédite.
 
 ---
 
-## Templates HTML (`app/templates/`)
+## Migration depuis FastAPI (Archivé)
 
-La structure des templates a été modernisée :
-- `landing_page.html` : Présentation du projet.
-- `auth.html` : Connexion/Inscription avec animation flip.
-- `diagnosis_form.html` : Saisie des 10 features cliniques.
-- `diagnosis_result.html` : Résultat + Graphique SHAP.
-- `partials/` : En-tête partagé pour une navigation fluide.
+L'ancienne architecture basée sur FastAPI avec des vues HTML (`templates/`) et des assets (`static/`) a été **archivée** dans le dossier `archive/`. 
+Cette refonte vers Streamlit permet une intégration plus native, rapide et interactive avec les modèles de Machine Learning (notamment pour l'affichage des graphiques dynamiques générés par Matplotlib/SHAP).
 
----
-
-## Décisions de conception
-
-**Authentification par session :** Utilisation de cookies signés (HMAC) pour une gestion simple et sécurisée des sessions.
-
-**Design unifié :** Utilisation d'un thème CSS global (`unified_theme.css`) pour une esthétique premium et cohérente.

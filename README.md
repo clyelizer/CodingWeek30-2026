@@ -1,8 +1,25 @@
 # PediAppendix — Aide au diagnostic pédiatrique de l'appendicite
 
-## Présentation
+## 🙏 Remerciements
+
+Nous tenons à exprimer notre profonde gratitude envers :
+- **Dr. Hermann Agossou** et **Pr. Kawtar Zerhouni** pour leur enseignement, leur encadrement de qualité et leur bienveillance tout au long de ce projet.
+- **L'équipe pédagogique et tous les autres encadrants** pour leur disponibilité et leurs conseils précieux.
+- **L'École Centrale Casablanca** pour le cadre d'excellence propice à notre apprentissage et à la réalisation de ce projet pratique.
+
+---
+
+## 🚀 Présentation
 
 **PediAppendix** est un système d'aide à la décision clinique pour le diagnostic de l'appendicite pédiatrique. À partir de **10 paramètres cliniques courants** (examen physique, biologie, échographie), il prédit la probabilité d'appendicite et fournit une explication SHAP détaillée.
+
+### Aperçu de l'application
+<div align="center">
+  <img src="MD/app_demo_1.png" width="45%" style="margin: 5px;">
+  <img src="MD/app_demo_2.png" width="45%" style="margin: 5px;">
+  <img src="MD/app_demo_3.png" width="45%" style="margin: 5px;">
+  <img src="MD/app_demo_4.png" width="45%" style="margin: 5px;">
+</div>
 
 ### 👥 Équipe Projet — GROUPE 31
 | Membre | Rôle |
@@ -28,13 +45,6 @@
 ---
 
 
-## Présentation du Groupe projet 
- GROUPE 31 
-
-Coulibaly eli... (Teamlead)
-....
-.....
-
 ---
 ## Architecture du projet
 
@@ -55,13 +65,10 @@ projet/
 │   ├── test_data_processing.py   11 tests
 │   └── test_model.py             2 tests        → 13 tests total, tous passent
 ├── app/
-│   ├── app.py               interface FastAPI
-│   ├── static/              CSS et assets
-│   └── templates/
-│       ├── landing_page.html
-│       ├── auth.html
-│       ├── diagnosis_form.html
-│       └── diagnosis_result.html
+│   └── app.py               interface Streamlit
+├── archive/
+│   ├── static/              CSS et assets (anciens fichiers FastAPI)
+│   └── templates/           anciens templates HTML (FastAPI)
 ├── notebooks/
 │   └── eda.ipynb            analyse exploratoire du dataset
 ├── MD/                      Documentation technique détaillée
@@ -253,6 +260,44 @@ Ce projet suit un paradigme **fonctionnel ** :
 
 Voir le dossier [`MD/`](MD/README.md) pour la documentation détaillée
 de chaque module avec les sorties et décisions de conception.
+
+---
+
+## 📚 Ce que nous avons appris (Learnings)
+
+Tout au long de cette Coding Week, notre équipe a pu mettre en pratique et consolider de nombreuses compétences techniques et organisationnelles :
+- **Gestion de projet et collaboration :** Utilisation intensive de Jira pour le suivi des tâches et Git/GitHub pour le versioning, avec une séparation stricte des rôles (Teamlead, Data Engineer, ML Engineer, Web Dev, Data Analyst).
+- **Pipeline Data Engineering robuste :** Création d'un pipeline fonctionnel de traitement de données (encodage, scaling, optimisation mémoire) modulaire et entièrement testé unitairement.
+- **Sélection et Optimisation de Modèles (Machine Learning) :** Traitement d'un problème médical sensible, impliquant de tester plusieurs modèles (Random Forest, LightGBM, CatBoost) et de justifier le choix par des métriques fiables (AUC-ROC, F1-Score).
+- **Interprétabilité des Modèles Locaux (XAI) :** Maîtrise de la bibliothèque SHAP pour transformer une prédiction "boîte noire" en une décision médicale justifiable grâce aux graphiques "Waterfall".
+- **Développement Web (Streamlit) :** Conception rapide et itérative d'une interface utilisateur interactive mettant en valeur le modèle prédictif de manière intuitive.
+- **Prompt Engineering :** Utilisation d'assistants IA pour l'optimisation, la génération de code boilerplate et le refactoring d'architecture (FastAPI vers Streamlit).
+
+## ⚠️ Limites du Projet
+
+Malgré ses bonnes performances, PediAppendix présente certaines limites intrinsèques :
+1. **Taille et représentativité du dataset :** Entraîné sur 776 patients provenant d'une seule source hospitalière (Regensburg), le modèle pourrait souffrir de biais et mal généraliser sur d'autres populations ou protocoles hospitaliers différents.
+2. **Dépendant de la qualité de saisie :** Le système dépend de la précision de facteurs subjectifs (ex: niveau de douleur) et de l'inter-observabilité des médecins.
+3. **Limites de l'échographie :** Le diamètre de l'appendice est une variable cruciale dans notre modèle, mais en pratique, l'appendice n'est pas toujours visualisable à l'échographie (à cause de gaz intestinaux, par exemple). Le modèle gère mal cette "absence" sans imputation préalable.
+4. **Prise de décision clinique :** Le modèle gère une probabilité binaire brute, sans inclure le diagnostic différentiel médical (ex : gastro-entérite, adénite mésentérique).
+
+## 🔮 Perspectives et Améliorations (Pousser les limites)
+
+Pour amener PediAppendix du statut de "Proof of Concept" (POC) à un véritable outil certifié (Dispositif Médical) :
+- **Validation multicentrique :** Ré-entraîner et valider le modèle sur des jeux de données provenant de plusieurs hôpitaux internationaux pour garantir sa robustesse.
+- **Gestion dynamique des valeurs manquantes :** Intégrer des algorithmes robustes capables de faire des prédictions (ex: XGBoost/LightGBM natifs) même lorsqu'une échographie n'a pas pu être réalisée au moment de l'admission.
+- **Déploiement Cloud et MLOps :** Intégrer le modèle dans une infrastructure MLflow complète (suivi de data drift, ré-entraînement continu).
+- **Approbation éthique et légale :** Préparer le dossier technique de conformité réglementaire (RGPD pour la confidentialité des données patients, et directive européenne sur les Dispositifs Médicaux).
+
+## 🏥 Application Pratique sur le Terrain
+
+En pratique, **PediAppendix n'a pas vocation à remplacer le médecin**.
+Il agit comme un outil de **triage avancé (Second Opinion System)** aux urgences pédiatriques :
+1. L'infirmier(e) d'accueil ou l'interne remplit rapidement les constantes vitales et les données cliniques simples dans la tablette.
+2. Le modèle calcule le score de risque instantanément.
+3. **Si le risque est très élevé**, l'alerte prévient le chirurgien de garde pour une intervention rapide (réduction du risque de péritonite).
+4. **Si le risque est intermédiaire ou faible**, cela aide le médecin senior à justifier une mise en observation prudente au lieu de prescrire un scanner systématique (réduisant ainsi l'exposition de l'enfant aux radiations).
+5. **Le graphique SHAP** est imprimé et glissé dans le dossier médical pour justifier légalement la décision médicale prise, en toute transparence pour les parents.
 
 ---
 
