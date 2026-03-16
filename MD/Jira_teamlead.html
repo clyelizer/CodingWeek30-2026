@@ -1,0 +1,435 @@
+<html
+        xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<title>Jira</title>
+<style type="text/css">
+table {
+    mso-displayed-decimal-separator:"\.";
+    mso-displayed-thousand-separator:"\,";
+}
+body
+{
+    margin: 0px;
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+    color:black;
+}
+
+</style>
+<META HTTP-EQUIV="Content-Type" Content="application/vnd.ms-excel; charset=UTF-8">
+<!-- JRA-7598 - ensure fields (e.g. description) occupy only one cell - even fields containing newlines. -->
+<!--
+Vertical align all cells to the top, in order to align all issue rows of issuetable to the top,
+since Excel does not use or save the css files it is hardcoded here.
+-->
+<style>
+@page
+{
+mso-page-orientation:landscape;
+margin:.25in .25in .5in .25in;
+mso-header-margin:.5in;
+mso-footer-margin:.25in;
+mso-footer-data:"&R&P of &N";
+mso-horizontal-page-align:center;
+mso-vertical-page-align:center;
+}
+
+td.issuekey,
+td.issuetype,
+td.status {
+    mso-style-parent: "";
+    mso-number-format: \@;
+    text-align: left;
+}
+br
+{
+    mso-data-placement:same-cell;
+}
+
+td
+{
+    vertical-align: top;
+}
+</style>
+
+<!--[if gte mso 9]><xml>
+<x:ExcelWorkbook>
+<x:ExcelWorksheets>
+<x:ExcelWorksheet>
+<x:Name>general_report</x:Name>
+<x:WorksheetOptions>
+<x:Print>
+<x:ValidPrinterInfo/>
+</x:Print>
+</x:WorksheetOptions>
+</x:ExcelWorksheet>
+</x:ExcelWorksheets>
+</x:ExcelWorkbook>
+</xml><![endif]-->
+</head>
+<body>
+
+<table border="1">
+    <tr bgcolor="#205081" height="30">
+        <td colspan="11">
+            <img src="https://grp31.atlassian.net/images/icon-jira-family-logo.png" width="57" height="30" border="0" alt="Jira">
+        </td>
+    </tr>
+    <tr>
+        <td colspan="11">
+            <a href="https://grp31.atlassian.net/issues/?jql=project+%3D+SUP+AND+assignee+%3D+currentUser%28%29+AND+resolution+%3D+Unresolved+ORDER+BY+%22Time+to+resolution%22+ASC">Jira</a>
+        </td>
+    </tr>
+    <tr>
+                <td colspan="11">
+            Displaying <strong>10</strong> issues at <strong>16/Mar/26 3:14 AM</strong>.
+        </td>
+    </tr>
+</table>
+
+
+
+
+                                        <table id="issuetable" class="aui " border="1" cellpadding="3" cellspacing="1" width="100%">
+                        <thead>
+        <tr class="rowHeader">
+            
+                                                            <th class="colHeaderLink headerrow-issuetype" data-id="issuetype">
+                                                        Issue Type
+                                                    </th>
+                                                
+                                                            <th class="colHeaderLink headerrow-issuekey" data-id="issuekey">
+                                                        Key
+                                                    </th>
+                                                
+                                                            <th class="colHeaderLink headerrow-summary" data-id="summary">
+                                                        Summary
+                                                    </th>
+                                                
+                                                            <th class="colHeaderLink headerrow-assignee" data-id="assignee">
+                                                        Assignee
+                                                    </th>
+                                                
+                                                            <th class="colHeaderLink headerrow-reporter" data-id="reporter">
+                                                        Reporter
+                                                    </th>
+                                                
+                                                            <th class="colHeaderLink headerrow-priority" data-id="priority">
+                                                        Priority
+                                                    </th>
+                                                
+                                                            <th class="colHeaderLink headerrow-status" data-id="status">
+                                                        Status
+                                                    </th>
+                                                
+                                                            <th class="colHeaderLink headerrow-resolution" data-id="resolution">
+                                                        Resolution
+                                                    </th>
+                                                
+                                                            <th class="colHeaderLink headerrow-created" data-id="created">
+                                                        Created
+                                                    </th>
+                                                
+                                                            <th class="colHeaderLink headerrow-updated" data-id="updated">
+                                                        Updated
+                                                    </th>
+                                                
+                                                            <th class="colHeaderLink headerrow-duedate" data-id="duedate">
+                                                        Due date
+                                                    </th>
+                                                                    </tr>
+    </thead>
+    <tbody>
+                    
+
+                <tr id="issuerow10115" rel="10115" data-issuekey="SUP-40" class="issuerow">
+                                            <td class="issuetype">    Task
+</td>
+                                            <td class="issuekey">
+
+    <a class="issue-link" data-issue-key="SUP-40" href="https://grp31.atlassian.net/browse/SUP-40">SUP-40</a>
+</td>
+                                            <td class="summary"><p>
+                TeamLead-Valider la reproductibilité du projet. ‎
+    </p>
+</td>
+                                            <td class="assignee">            coulibaly ELISE
+    </td>
+                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
+    </td>
+                                            <td class="priority">           Medium
+    </td>
+                                            <td class="status">
+                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
+                                            <td class="resolution">    <em>Unresolved</em>
+</td>
+                                            <td class="created"> 14/Mar/26 10:32 PM </td>
+                                            <td class="updated"> 14/Mar/26 10:32 PM </td>
+                                            <td class="duedate">    &nbsp;
+</td>
+                    </tr>
+
+
+                <tr id="issuerow10114" rel="10114" data-issuekey="SUP-39" class="issuerow">
+                                            <td class="issuetype">    Task
+</td>
+                                            <td class="issuekey">
+
+    <a class="issue-link" data-issue-key="SUP-39" href="https://grp31.atlassian.net/browse/SUP-39">SUP-39</a>
+</td>
+                                            <td class="summary"><p>
+                TeamLead-Créer un Dockerfile pour conteneuriser l’application.
+    </p>
+</td>
+                                            <td class="assignee">            coulibaly ELISE
+    </td>
+                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
+    </td>
+                                            <td class="priority">           Medium
+    </td>
+                                            <td class="status">
+                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
+                                            <td class="resolution">    <em>Unresolved</em>
+</td>
+                                            <td class="created"> 14/Mar/26 10:32 PM </td>
+                                            <td class="updated"> 14/Mar/26 10:32 PM </td>
+                                            <td class="duedate">    &nbsp;
+</td>
+                    </tr>
+
+
+                <tr id="issuerow10113" rel="10113" data-issuekey="SUP-38" class="issuerow">
+                                            <td class="issuetype">    Task
+</td>
+                                            <td class="issuekey">
+
+    <a class="issue-link" data-issue-key="SUP-38" href="https://grp31.atlassian.net/browse/SUP-38">SUP-38</a>
+</td>
+                                            <td class="summary"><p>
+                TeamLead- Finaliser le README avec toutes les réponses aux questions critiques.
+    </p>
+</td>
+                                            <td class="assignee">            coulibaly ELISE
+    </td>
+                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
+    </td>
+                                            <td class="priority">           Medium
+    </td>
+                                            <td class="status">
+                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
+                                            <td class="resolution">    <em>Unresolved</em>
+</td>
+                                            <td class="created"> 14/Mar/26 10:31 PM </td>
+                                            <td class="updated"> 14/Mar/26 10:31 PM </td>
+                                            <td class="duedate">    &nbsp;
+</td>
+                    </tr>
+
+
+                <tr id="issuerow10112" rel="10112" data-issuekey="SUP-37" class="issuerow">
+                                            <td class="issuetype">    Task
+</td>
+                                            <td class="issuekey">
+
+    <a class="issue-link" data-issue-key="SUP-37" href="https://grp31.atlassian.net/browse/SUP-37">SUP-37</a>
+</td>
+                                            <td class="summary"><p>
+                TeamLead- Documenter l’ingénierie des prompts pour une tâche spécifique.
+    </p>
+</td>
+                                            <td class="assignee">            coulibaly ELISE
+    </td>
+                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
+    </td>
+                                            <td class="priority">           Medium
+    </td>
+                                            <td class="status">
+                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
+                                            <td class="resolution">    <em>Unresolved</em>
+</td>
+                                            <td class="created"> 14/Mar/26 10:31 PM </td>
+                                            <td class="updated"> 14/Mar/26 10:35 PM </td>
+                                            <td class="duedate">    &nbsp;
+</td>
+                    </tr>
+
+
+                <tr id="issuerow10111" rel="10111" data-issuekey="SUP-36" class="issuerow">
+                                            <td class="issuetype">    Task
+</td>
+                                            <td class="issuekey">
+
+    <a class="issue-link" data-issue-key="SUP-36" href="https://grp31.atlassian.net/browse/SUP-36">SUP-36</a>
+</td>
+                                            <td class="summary"><p>
+                TeamLead-Coordonner l’intégration des différentes branches.
+    </p>
+</td>
+                                            <td class="assignee">            coulibaly ELISE
+    </td>
+                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
+    </td>
+                                            <td class="priority">           Medium
+    </td>
+                                            <td class="status">
+                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
+                                            <td class="resolution">    <em>Unresolved</em>
+</td>
+                                            <td class="created"> 14/Mar/26 10:30 PM </td>
+                                            <td class="updated"> 14/Mar/26 10:30 PM </td>
+                                            <td class="duedate">    &nbsp;
+</td>
+                    </tr>
+
+
+                <tr id="issuerow10110" rel="10110" data-issuekey="SUP-35" class="issuerow">
+                                            <td class="issuetype">    Task
+</td>
+                                            <td class="issuekey">
+
+    <a class="issue-link" data-issue-key="SUP-35" href="https://grp31.atlassian.net/browse/SUP-35">SUP-35</a>
+</td>
+                                            <td class="summary"><p>
+                TeamLead- Mettre en place GitHub Actions (.github/workflows/ci.yml) avec un test minimal.
+    </p>
+</td>
+                                            <td class="assignee">            coulibaly ELISE
+    </td>
+                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
+    </td>
+                                            <td class="priority">           Medium
+    </td>
+                                            <td class="status">
+                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
+                                            <td class="resolution">    <em>Unresolved</em>
+</td>
+                                            <td class="created"> 14/Mar/26 10:29 PM </td>
+                                            <td class="updated"> 14/Mar/26 10:29 PM </td>
+                                            <td class="duedate">    &nbsp;
+</td>
+                    </tr>
+
+
+                <tr id="issuerow10109" rel="10109" data-issuekey="SUP-34" class="issuerow">
+                                            <td class="issuetype">    Task
+</td>
+                                            <td class="issuekey">
+
+    <a class="issue-link" data-issue-key="SUP-34" href="https://grp31.atlassian.net/browse/SUP-34">SUP-34</a>
+</td>
+                                            <td class="summary"><p>
+                TeamLead-Initialiser le README.md avec la description du projet.
+    </p>
+</td>
+                                            <td class="assignee">            coulibaly ELISE
+    </td>
+                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
+    </td>
+                                            <td class="priority">           Medium
+    </td>
+                                            <td class="status">
+                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
+                                            <td class="resolution">    <em>Unresolved</em>
+</td>
+                                            <td class="created"> 14/Mar/26 10:28 PM </td>
+                                            <td class="updated"> 14/Mar/26 10:28 PM </td>
+                                            <td class="duedate">    &nbsp;
+</td>
+                    </tr>
+
+
+                <tr id="issuerow10108" rel="10108" data-issuekey="SUP-33" class="issuerow">
+                                            <td class="issuetype">    Task
+</td>
+                                            <td class="issuekey">
+
+    <a class="issue-link" data-issue-key="SUP-33" href="https://grp31.atlassian.net/browse/SUP-33">SUP-33</a>
+</td>
+                                            <td class="summary"><p>
+                TeamLead-Configurer le tableau jira et inviter l’équipe
+    </p>
+</td>
+                                            <td class="assignee">            coulibaly ELISE
+    </td>
+                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
+    </td>
+                                            <td class="priority">           Medium
+    </td>
+                                            <td class="status">
+                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
+                                            <td class="resolution">    <em>Unresolved</em>
+</td>
+                                            <td class="created"> 14/Mar/26 10:27 PM </td>
+                                            <td class="updated"> 14/Mar/26 10:27 PM </td>
+                                            <td class="duedate">    &nbsp;
+</td>
+                    </tr>
+
+
+                <tr id="issuerow10107" rel="10107" data-issuekey="SUP-32" class="issuerow">
+                                            <td class="issuetype">    Task
+</td>
+                                            <td class="issuekey">
+
+    <a class="issue-link" data-issue-key="SUP-32" href="https://grp31.atlassian.net/browse/SUP-32">SUP-32</a>
+</td>
+                                            <td class="summary"><p>
+                TeamLead-Configurer le tableau jira et inviter l’équipe
+    </p>
+</td>
+                                            <td class="assignee">            coulibaly ELISE
+    </td>
+                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
+    </td>
+                                            <td class="priority">           Medium
+    </td>
+                                            <td class="status">
+                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
+                                            <td class="resolution">    <em>Unresolved</em>
+</td>
+                                            <td class="created"> 14/Mar/26 10:26 PM </td>
+                                            <td class="updated"> 14/Mar/26 10:26 PM </td>
+                                            <td class="duedate">    &nbsp;
+</td>
+                    </tr>
+
+
+                <tr id="issuerow10106" rel="10106" data-issuekey="SUP-31" class="issuerow">
+                                            <td class="issuetype">    Task
+</td>
+                                            <td class="issuekey">
+
+    <a class="issue-link" data-issue-key="SUP-31" href="https://grp31.atlassian.net/browse/SUP-31">SUP-31</a>
+</td>
+                                            <td class="summary"><p>
+                TeamLead-Créer le dépôt GitHub et la structure de dossiers
+    </p>
+</td>
+                                            <td class="assignee">            coulibaly ELISE
+    </td>
+                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
+    </td>
+                                            <td class="priority">           Medium
+    </td>
+                                            <td class="status">
+                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
+                                            <td class="resolution">    <em>Unresolved</em>
+</td>
+                                            <td class="created"> 14/Mar/26 10:25 PM </td>
+                                            <td class="updated"> 14/Mar/26 10:25 PM </td>
+                                            <td class="duedate">    &nbsp;
+</td>
+                    </tr>
+        </tbody>
+    </table>
+    <div class="end-of-stable-message"></div>
+            <table border="1" >
+<tr>
+    <td bgcolor="#dddddd" colspan="11"><font size="1">
+        Generated at Mon Mar 16 03:14:18 UTC 2026 by coulibaly ELISE using Jira 1001.0.0-SNAPSHOT#100291-rev:a186e209b494e623bc8cde22ac7f45e37bcce777.
+    </font></td>
+</tr>
+</table>
+
+</body>
+</html>
