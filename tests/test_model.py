@@ -11,7 +11,7 @@ import pytest
 def test_model_loading():
     """Vérifie que le modèle et le préprocesseur existent et se chargent."""
     assert os.path.exists('models/preprocessor.pkl'), "preprocessor.pkl manquant"
-    model_files = [f for f in os.listdir('models') if f.endswith('.pkl') and f != 'preprocessor.pkl']
+    model_files = [f for f in os.listdir('models') if f.endswith('.pkl') and f != 'preprocessor.pkl' and f != 'best_model_info.pkl']
     assert len(model_files) > 0, "Aucun modèle trouvé dans models/"
     model = joblib.load(os.path.join('models', model_files[0]))
     preprocessor = joblib.load('models/preprocessor.pkl')
@@ -21,7 +21,7 @@ def test_model_loading():
 def test_model_prediction():
     """Teste une prédiction sur une entrée factice."""
     preprocessor = joblib.load('models/preprocessor.pkl')
-    model_files = [f for f in os.listdir('models') if f.endswith('.pkl') and f != 'preprocessor.pkl']
+    model_files = [f for f in os.listdir('models') if f.endswith('.pkl') and f != 'preprocessor.pkl' and f != 'best_model_info.pkl']
     assert len(model_files) > 0
     model = joblib.load(os.path.join('models', model_files[0]))
 
@@ -33,9 +33,14 @@ def test_model_prediction():
         else:
             sample = df.iloc[[0]]
     else:
-        # Générer des zéros du bon nombre de features
-        n_features = preprocessor.n_features_in_ if hasattr(preprocessor, 'n_features_in_') else 10
-        sample = pd.DataFrame(np.zeros((1, n_features)))
+        # Récupérer dynamiquement les colonnes attendues par le préprocesseur
+        if hasattr(preprocessor, 'feature_names_in_'):
+            cols = list(preprocessor.feature_names_in_)
+            sample = pd.DataFrame(np.zeros((1, len(cols))), columns=cols)
+        else:
+            # Fallback
+            n_features = getattr(preprocessor, 'n_features_in_', 10)
+            sample = pd.DataFrame(np.zeros((1, n_features)))
 
     sample_processed = preprocessor.transform(sample)
     pred = model.predict(sample_processed)
