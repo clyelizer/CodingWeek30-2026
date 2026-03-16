@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<!--
+    Template: auth.html
+    Description: Formulaire de connexion simple utilisé par la route /login.
+    Placeholders: peut afficher `error` dans le contexte en cas d'auth échouée.
+-->
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>PediAppendix • Connexion</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/css/unified_theme.css">
+    <style>
+        .login-card {
+            max-width: 520px;
+        }
+
+        .login-title {
+            font-family: var(--font-head);
+            color: var(--white);
+            letter-spacing: 0.01em;
+        }
+
+        .help-text {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body class="themed-app with-shared-header">
+    {% set header_show_actions = false %}
+    {% set header_user = None %}
+    {% include "partials/shared_header.html" %}
+
+    <div class="d-flex page-viewport align-items-center justify-content-center">
+        <div class="container" style="max-width: 480px;">
+            <div class="card login-card glass-card p-4 pedi-form">
+                <div class="text-center mb-4">
+                    <h4 class="mb-1 login-title">Connexion</h4>
+                    <p class="mb-0" style="color: var(--muted);">Accès professionnel au dossier patient</p>
+                </div>
+
+                {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+                {% endif %}
+
+                <form method="post" action="/login">
+                    <div class="mb-3">
+                        <label class="form-label">Identifiant</label>
+                        <input type="text" name="username" class="form-control" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mot de passe</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn pedi-btn w-100">Se connecter</button>
+                </form>
+
+                <p class="help-text text-center mt-3">
+                    Comme dans un dossier médical, vos identifiants garantissent la confidentialité des données.
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

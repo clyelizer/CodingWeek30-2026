@@ -1,0 +1,159 @@
+:root {
+  --navy: #050d1a;
+  --navy-2: #0a1628;
+  --teal: #00c9a7;
+  --blue: #1e6eff;
+  --white: #f4f8ff;
+  --muted: #9bb0cf;
+  --text-dark: #10213e;
+  --border: rgba(255, 255, 255, 0.12);
+  --glass: rgba(10, 22, 40, 0.66);
+  --glass-soft: rgba(255, 255, 255, 0.08);
+  --radius: 14px;
+  --font-head: 'Playfair Display', Georgia, serif;
+  --font-body: 'Sora', sans-serif;
+}
+
+body.themed-app {
+  font-family: var(--font-body);
+  background: linear-gradient(rgba(5, 13, 26, 0.82), rgba(5, 13, 26, 0.82)),
+    url('/static/back.jpeg') center / cover fixed no-repeat;
+  color: var(--white);
+}
+
+body.themed-app::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image: radial-gradient(rgba(0, 201, 167, 0.07) 1px, transparent 1px);
+  background-size: 4px 4px;
+  opacity: 0.45;
+}
+
+.pedi-nav {
+  background: rgba(5, 13, 26, 0.88) !important;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+}
+
+body.with-shared-header {
+  padding-top: 76px;
+}
+
+.page-viewport {
+  min-height: calc(100vh - 76px);
+}
+
+.pedi-header-actions {
+  flex-wrap: wrap;
+}
+
+.pedi-brand {
+  font-family: var(--font-head);
+  color: var(--white) !important;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.pedi-brand span {
+  color: var(--teal);
+}
+
+.pedi-user-label {
+  color: var(--muted);
+}
+
+.glass-card {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  background: var(--glass) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28);
+}
+
+.glass-header {
+  background: linear-gradient(135deg, rgba(0, 201, 167, 0.2), rgba(30, 110, 255, 0.22)) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.glass-header h4,
+.glass-header p,
+.glass-header h5,
+.glass-header small {
+  color: var(--white) !important;
+}
+
+.pedi-btn {
+  background: linear-gradient(135deg, var(--teal), var(--blue)) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 600 !important;
+  box-shadow: 0 8px 20px rgba(0, 201, 167, 0.25);
+}
+
+.pedi-btn:hover {
+  filter: brightness(1.05);
+}
+
+.pedi-btn-ghost {
+  background: var(--glass-soft) !important;
+  color: var(--white) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.pedi-form .form-label,
+.pedi-form .form-text {
+  color: var(--muted) !important;
+}
+
+.pedi-form .form-control,
+.pedi-form .form-select,
+.pedi-form .input-group-text {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: var(--white) !important;
+}
+
+.pedi-form .form-control::placeholder {
+  color: rgba(244, 248, 255, 0.55);
+}
+
+.pedi-form .form-control:focus,
+.pedi-form .form-select:focus {
+  border-color: rgba(0, 201, 167, 0.75) !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 201, 167, 0.16) !important;
+}
+
+.section-h {
+  color: var(--white) !important;
+  border-bottom: 2px solid rgba(0, 201, 167, 0.6) !important;
+  padding-bottom: 8px;
+}
+
+.themed-footer {
+  background: rgba(5, 13, 26, 0.7) !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+.themed-footer h6 {
+  color: var(--teal) !important;
+}
+
+.themed-footer p,
+.themed-footer em {
+  color: var(--muted) !important;
+}
+
+@media (max-width: 992px) {
+  .pedi-header-actions {
+    gap: 0.4rem !important;
+  }
+
+  .pedi-header-actions .btn,
+  .pedi-header-actions .small {
+    font-size: 0.72rem;
+  }
+}

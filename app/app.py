@@ -15,18 +15,27 @@ Features du modèle (10) :
 Pour lancer :
   python app.py [--host 0.0.0.0] [--port 8000] [--reload]
   ou : uvicorn app:app --reload
+
+Design : templates premium (landing_page, auth avec flip 3D, diagnosis_console).
+Auth   : session cookie signé HMAC — admin/admin123 (sans base de données).
 """
 
 from __future__ import annotations
 
 import sys
 import pathlib
+import os
+import time
+import base64
+import hashlib
+import hmac
+import json
 
 import joblib
 import pandas as pd
 
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request, Form, HTTPException, status
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -70,6 +79,47 @@ _BINARY_COLS = {
     "nausea",
     "ipsilateral_rebound_tenderness",
 }
+
+# ---------------------------------------------------------------------------
+# Auth : session simplifiée (HMAC, sans base de données)
+# ---------------------------------------------------------------------------
+_SECRET_KEY = os.environ.get("PEDIA_SECRET", "dev-secret-please-change")
+_SESSION_COOKIE = "pedi_session"
+_SESSION_DURATION = 4 * 60 * 60  # 4 heures
+
+# Utilisateur administrateur codé en dur (usage local / démo)
+_ADMIN_USER = "admin"
+_ADMIN_PASS = "admin123"
+
+
+def _make_session_token(username: str) -> str:
+    """Génère un token de session signé HMAC, encodé URL-safe base64."""
+    expires = int(time.time()) + _SESSION_DURATION
+    payload = f"{username}|{expires}"
+    signature = hmac.new(_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    return base64.urlsafe_b64encode(f"{payload}|{signature}".encode()).decode()
+
+
+def _verify_session_token(token: str) -> str | None:
+    """Vérifie un token et retourne le username ou None."""
+    try:
+        raw = base64.urlsafe_b64decode(token.encode()).decode()
+        username, expires, signature = raw.split("|")
+        expected = hmac.new(_SECRET_KEY.encode(), f"{username}|{expires}".encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            return None
+        if int(expires) < int(time.time()):
+            return None
+        return username
+    except Exception:
+        return None
+
+
+def _get_current_user(request: Request) -> str | None:
+    token = request.cookies.get(_SESSION_COOKIE)
+    if not token:
+        return None
+    return _verify_session_token(token)
 
 
 def _load_resources() -> None:
@@ -138,10 +188,69 @@ def _build_input_row(form_data: dict) -> pd.DataFrame:
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request) -> HTMLResponse:
-    """Affiche le formulaire de saisie clinique."""
-    return templates.TemplateResponse("index.html", {
+    """Page d'accueil (landing page premium)."""
+    return templates.TemplateResponse("landing_page.html", {"request": request})
+
+
+# ---------------------------------------------------------------------------
+# Auth routes
+# ---------------------------------------------------------------------------
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request) -> HTMLResponse:
+    """Page de connexion — animation flip login / créer un compte."""
+    if _get_current_user(request):
+        return RedirectResponse("/form", status_code=303)
+    return templates.TemplateResponse("auth.html", {"request": request})
+
+
+@app.post("/login")
+async def login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    """Vérifie admin/admin123 et pose un cookie de session signé."""
+    if username == _ADMIN_USER and password == _ADMIN_PASS:
+        token = _make_session_token(username)
+        response = RedirectResponse(url="/form", status_code=303)
+        response.set_cookie(_SESSION_COOKIE, token, httponly=True, samesite="lax")
+        return response
+    return templates.TemplateResponse(
+        "auth.html",
+        {"request": request, "error": "Identifiant ou mot de passe incorrect."},
+        status_code=401,
+    )
+
+
+@app.post("/register")
+async def register(request: Request):
+    """Stub création de compte — renvoie vers auth avec message."""
+    return templates.TemplateResponse(
+        "auth.html",
+        {"request": request, "error": "La création de compte est désactivée en mode démo. Utilisez admin / admin123."},
+        status_code=200,
+    )
+
+
+@app.get("/logout")
+async def logout() -> RedirectResponse:
+    """Déconnecte l'utilisateur."""
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie(_SESSION_COOKIE)
+    return response
+
+
+@app.get("/form", response_class=HTMLResponse)
+async def read_form(request: Request) -> HTMLResponse:
+    """Affiche la console de diagnostic clinique."""
+    user = _get_current_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    return templates.TemplateResponse("diagnosis_console.html", {
         "request":  request,
         "defaults": _defaults,
+        "user":     user,
     })
 
 
@@ -160,12 +269,13 @@ async def predict(
     ipsilateral_rebound_tenderness: str   = Form(default="no"),
 ) -> HTMLResponse:
     """
-    Route de prédiction.
-
-    Reçoit les 10 champs du formulaire, construit le vecteur feature,
-    calcule la probabilité d'appendicite, génère le graphique SHAP
-    et renvoie la page résultat.
+    Route de prédiction HTML.
+    Rend la console de diagnostic avec les résultats inline.
     """
+    user = _get_current_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+
     form_data = {
         "age":                            age,
         "body_temperature":               body_temperature,
@@ -180,6 +290,11 @@ async def predict(
     }
 
     X    = _build_input_row(form_data)
+    
+    # Vérifier que le modèle est chargé
+    if _model is None:
+        raise RuntimeError("Le modèle n'a pas pu être chargé")
+    
     prob = predict_proba_safe(_model, X)
 
     decision   = "appendicite" if prob >= 0.5 else "pas d'appendicite"
@@ -193,14 +308,51 @@ async def predict(
     except Exception as exc:
         print(f"SHAP error (non-fatal): {exc}")
 
-    return templates.TemplateResponse("result.html", {
+    return templates.TemplateResponse("diagnosis_console.html", {
         "request":    request,
+        "user":       user,
         "prob":       f"{prob * 100:.1f}",
         "decision":   decision,
         "risk_class": risk_class,
         "shap_b64":   shap_b64,
         "form":       form_data,
+        "defaults":   _defaults,
     })
+
+
+# ---------------------------------------------------------------------------
+# API JSON (pour preview temps réel dans diagnosis_console.html)
+# ---------------------------------------------------------------------------
+
+@app.post("/api/predict")
+async def api_predict(request: Request) -> dict:
+    """API JSON pour prédiction temps réel — utilisée par le frontend AJAX."""
+    if not _get_current_user(request):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Non autorisé")
+
+    form_values = await request.form()
+    form_data: dict[str, str | float] = {k: v for k, v in form_values.items()}
+
+    X    = _build_input_row(form_data)
+    prob = predict_proba_safe(_model, X)
+
+    decision   = "appendicite" if prob >= 0.5 else "pas d'appendicite"
+    risk_class = "danger"      if prob >= 0.5 else "success"
+
+    shap_b64: str | None = None
+    try:
+        sv, base_val = compute_shap_values(_model, X)
+        shap_b64 = make_shap_waterfall_b64(sv, base_val, X)
+    except Exception as exc:
+        print(f"SHAP error (non-fatal): {exc}")
+
+    return {
+        "prob":       f"{prob * 100:.1f}",
+        "decision":   decision,
+        "risk_class": risk_class,
+        "shap_b64":   shap_b64,
+        "form":       form_data,
+    }
 
 
 # ---------------------------------------------------------------------------
