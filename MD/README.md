@@ -5,16 +5,16 @@
 | # | Fichier | Module | Contenu |
 |---|---------|--------|---------|
 | 01 | [01_data_processing.md](01_data_processing.md) | `src/data_processing.py` | Pipeline de traitement des données brutes |
-| 02 | [02_train_model.md](02_train_model.md) | `src/train_model.py` | Entraînement des 4 modèles ML + résultats |
+| 02 | [02_train_model.md](02_train_model.md) | `src/train_model.py` | Entraînement des modèles ML + résultats |
 | 03 | [03_evaluate_model.md](03_evaluate_model.md) | `src/evaluate_model.py` | Prédiction individuelle + explications SHAP |
 | 04 | [04_webapp.md](04_webapp.md) | `app/app.py` | Interface web FastAPI |
 
 ---
 
-## Vue d'ensemble du pipeline
+## Vue d'overview du pipeline
 
 ```
-data/raw/data_finale.xlsx
+data/raw/dataset.xlsx
         │
         ▼  src/data_processing.py
 data/processed/processed_data.joblib
@@ -22,16 +22,17 @@ data/processed/processed_data.joblib
         │
         ▼  src/train_model.py
 models/
-  random_forest.joblib       AUC = 0.9287  ← MEILLEUR
-  gradient_boosting.joblib   AUC = 0.9141
-  logistic_regression.joblib AUC = 0.8283
-  svm.joblib                 AUC = 0.8102
+  preprocessor.pkl           ← Préprocesseur fitté
+  random_forest_model.pkl    ← Modèle Random Forest
+  gradient_boosting_model.pkl
+  ...
         │
         ▼  src/evaluate_model.py  +  app/app.py
 http://localhost:8000
-  → formulaire 10 features
-  → probabilité d'appendicite
-  → graphique SHAP waterfall
+  → Authentification / Landing Page
+  → Formulaire 10 features
+  → Probabilité d'appendicite
+  → Graphique SHAP waterfall
 ```
 
 ---
@@ -41,46 +42,32 @@ http://localhost:8000
 ### Jeu de données
 - **776 patients** pédiatriques (Regensburg Pediatric Appendicitis, UCI)
 - **27 variables** brutes → **10 features** retenues
-- **Cible :** `Diagnosis` — 0 = pas d'appendicite (461, 59.4%), 1 = appendicite (315, 40.6%)
+- **Cible :** `Diagnosis` — 0 = pas d'appendicite, 1 = appendicite
 - **Split :** 80/20 stratifié → train : 620 patients, test : 156 patients
 
-### Performances sur le jeu de test (n = 156)
+### Performances du modèle Random Forest
+- **AUC-ROC :** ~0.92
+- **Précision globale :** ~0.85
 
-| Modèle | AUC-ROC | F1 macro | Accuracy |
-|--------|---------|----------|----------|
-| **Random Forest** | **0.9287** | **0.8457** | **0.8526** |
-| Gradient Boosting | 0.9141 | 0.8178 | 0.8269 |
-| Logistic Regression | 0.8283 | 0.7354 | 0.7564 |
-| SVM (RBF) | 0.8102 | 0.7198 | 0.7436 |
-
-### Tests unitaires
+### Tests unitaires (GitHub Actions)
 
 | Fichier | Tests | Statut |
 |---------|-------|--------|
-| `tests/test_data_processing.py` | 11 | ✅ passent |
-| `tests/test_model.py` | 15 | ✅ passent |
-| `tests/test_evaluate_model.py` | 8 | ✅ passent |
-| **Total** | **34** | **✅ 34/34** |
+| `tests/test_data_processing.py` | 11 | ✅ Passent |
+| `tests/test_model.py` | 2 | ✅ Passent |
+| **Total** | **13** | **✅ 13/13** |
 
 ---
 
 ## Décisions techniques transversales
 
-**Paradigme fonctionnel strict**
+**Paradigme fonctionnel**
 > Une fonction = une tâche = un test = une assertion précise.  
 > Chaque fonction reçoit ses entrées et retourne ses sorties explicitement,
 > sans effet de bord ni état global.
 
 **Pas de data leakage**
-> Le `StandardScaler` est encapsulé dans chaque `sklearn.Pipeline` et fitted
-> exclusivement sur `X_train`. Il ne voit jamais `X_test`.
+> Le `StandardScaler` (via le préprocesseur) est fitted exclusivement sur `X_train`.
 
 **Import lazy de SHAP**
-> Sur Python 3.14, la chaîne `shap → scipy → ...` est très lente à l'import (~15s)
-> et peut lever `KeyboardInterrupt`. `shap` est donc importé à l'intérieur des
-> fonctions, uniquement lors du premier appel.
-
-**Gestion du déséquilibre de classes**
-> 59.4% négatifs / 40.6% positifs — corrigé par `class_weight="balanced"` sur
-> Logistic Regression, Random Forest et SVM. Pour Gradient Boosting, la pondération
-> intrinsèque des erreurs atténue partiellement ce déséquilibre.
+> L'import de `shap` est différé pour ne pas ralentir le démarrage de l'application.

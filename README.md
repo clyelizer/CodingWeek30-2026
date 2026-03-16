@@ -1,53 +1,77 @@
 # PediAppendix — Aide au diagnostic pédiatrique de l'appendicite
 
-## Présentation
+## 🙏 Remerciements
 
-**PediAppendix** est un système d'aide à la décision clinique pour le diagnostic
-de l'appendicite pédiatrique.
-
-À partir de **10 paramètres cliniques courants** (examen physique, biologie,
-échographie), il prédit la probabilité d'appendicite et fournit une explication
-SHAP détaillée de chaque prédiction.
-
-**Dataset :** Regensburg Pediatric Appendicitis (UCI), n = 776 patients.  
-**Modèle :** Random Forest — AUC-ROC = **0.9287** sur le jeu de test (n = 156).
+Nous tenons à exprimer notre profonde gratitude envers :
+- **Dr. Hermann Agossou** et **Pr. Kawtar Zerhouni** pour leur enseignement, leur encadrement de qualité et leur bienveillance tout au long de ce projet.
+- **L'équipe pédagogique et tous les autres encadrants** pour leur disponibilité et leurs conseils précieux.
+- **L'École Centrale Casablanca** pour le cadre d'excellence propice à notre apprentissage et à la réalisation de ce projet pratique.
 
 ---
 
+## 🚀 Présentation
+
+**PediAppendix** est un système d'aide à la décision clinique pour le diagnostic de l'appendicite pédiatrique. À partir de **10 paramètres cliniques courants** (examen physique, biologie, échographie), il prédit la probabilité d'appendicite et fournit une explication SHAP détaillée.
+
+### Aperçu de l'application
+<div align="center">
+  <img src="MD/app_demo_1.png" width="45%" style="margin: 5px;">
+  <img src="MD/app_demo_2.png" width="45%" style="margin: 5px;">
+  <img src="MD/app_demo_3.png" width="45%" style="margin: 5px;">
+  <img src="MD/app_demo_4.png" width="45%" style="margin: 5px;">
+</div>
+
+### 👥 Équipe Projet — GROUPE 31
+| Membre | Rôle |
+|--------|------|
+| **Coulibaly ELISE** | Teamlead & Coordination |
+| **Diallo Nassirou Amadou Oumar** | Data Engineer & Pipeline |
+| **MOHAMED JOUAHAR** | IA Engineer & Modélisation |
+| **Sanogo** | Web Developer (Streamlit) |
+| **Ange Sarah** | Data Analyst (EDA) |
+
+**Dataset :** Regensburg Pediatric Appendicitis (UCI), n = 776 patients.  
+**Modèle retenu :** Random Forest — AUC-ROC = **0.9359** (Best model).
+
+### 📈 Résultats et Interprétabilité
+
+| Courbe ROC (Performance) | Importance des Features (SHAP) |
+|:---:|:---:|
+| ![ROC Curve](file:///c:/Users/clyel/Desktop/new/CodingWeek30-2026/reports/figures/roc_Random_Forest.png) | ![SHAP Summary](file:///c:/Users/clyel/Desktop/new/CodingWeek30-2026/reports/figures/shap_summary.png) |
+
+> [!NOTE]
+> Le modèle Random Forest a été sélectionné pour sa stabilité en validation croisée (moyenne 0.92) et son excellente capacité de généralisation sur le jeu de test.
+
+---
+
+
+---
 ## Architecture du projet
 
 ```
 projet/
 ├── data/
-│   ├── raw/          data_finale.xlsx         (776 patients, 27 variables)
+│   ├── raw/          dataset.xlsx             (776 patients, 27 variables)
 │   └── processed/    processed_data.joblib    (split train/test stratifié 80/20)
 ├── models/
-│   ├── random_forest.joblib        ← modèle de production (AUC 0.9287)
-│   ├── gradient_boosting.joblib    (AUC 0.9141)
-│   ├── logistic_regression.joblib  (AUC 0.8283)
-│   └── svm.joblib                  (AUC 0.8102)
+│   ├── preprocessor.pkl           ← préprocesseur (StandardScaler)
+│   ├── random_forest_model.pkl    ← modèle de production (AUC ~0.92)
+│   └── ...
 ├── src/
 │   ├── data_processing.py   pipeline de traitement des données
 │   ├── train_model.py       entraînement et évaluation des modèles
 │   └── evaluate_model.py    prédiction individuelle + explications SHAP
 ├── tests/
 │   ├── test_data_processing.py   11 tests
-│   ├── test_model.py             15 tests
-│   └── test_evaluate_model.py    8 tests        → 34 tests total, tous passent
+│   └── test_model.py             2 tests        → 13 tests total, tous passent
 ├── app/
-│   ├── app.py               interface FastAPI
-│   └── templates/
-│       ├── index.html       formulaire de saisie (10 features)
-│       └── result.html      page de résultat + graphique SHAP
+│   └── app.py               interface Streamlit
+├── archive/
+│   ├── static/              CSS et assets (anciens fichiers FastAPI)
+│   └── templates/           anciens templates HTML (FastAPI)
 ├── notebooks/
 │   └── eda.ipynb            analyse exploratoire du dataset
-├── MD/
-│   ├── README.md            index de la documentation
-│   ├── 01_data_processing.md
-│   ├── 02_train_model.md
-│   ├── 03_evaluate_model.md
-│   └── 04_webapp.md
-├── conftest.py              configuration pytest (sys.path)
+├── MD/                      Documentation technique détaillée
 ├── requirements.txt
 └── Dockerfile
 ```
@@ -56,346 +80,26 @@ projet/
 
 # 📊 Organisation & Gestion de Projet
 
-Le projet a été géré via **Jira Atlassian**, avec une répartition claire des rôles et des responsabilités. Voici les extraits des tableaux de bord de l'équipe :
+Le projet a été géré via **Jira Atlassian**. 
+Nous avons opte pour un partage des tahces par role , selon les 5 roles repartis  
+Voici la répartition des tâches :
 
 ### 👤 Rôle : teamlead
 <details>
 <summary>Cliquez pour voir les tâches de teamlead</summary>
 
-<table border="1">
-
-                        <thead>
-        <tr class="rowHeader">
-            
-                                                            <th class="colHeaderLink headerrow-issuetype" data-id="issuetype">
-                                                        Issue Type
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-issuekey" data-id="issuekey">
-                                                        Key
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-summary" data-id="summary">
-                                                        Summary
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-assignee" data-id="assignee">
-                                                        Assignee
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-reporter" data-id="reporter">
-                                                        Reporter
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-priority" data-id="priority">
-                                                        Priority
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-status" data-id="status">
-                                                        Status
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-resolution" data-id="resolution">
-                                                        Resolution
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-created" data-id="created">
-                                                        Created
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-updated" data-id="updated">
-                                                        Updated
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-duedate" data-id="duedate">
-                                                        Due date
-                                                    </th>
-                                                                    </tr>
-    </thead>
-    <tbody>
-                    
-
-                <tr id="issuerow10115" rel="10115" data-issuekey="SUP-40" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-40" href="https://grp31.atlassian.net/browse/SUP-40">SUP-40</a>
-</td>
-                                            <td class="summary"><p>
-                TeamLead-Valider la reproductibilité du projet. ‎
-    </p>
-</td>
-                                            <td class="assignee">            coulibaly ELISE
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:32 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:32 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10114" rel="10114" data-issuekey="SUP-39" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-39" href="https://grp31.atlassian.net/browse/SUP-39">SUP-39</a>
-</td>
-                                            <td class="summary"><p>
-                TeamLead-Créer un Dockerfile pour conteneuriser l’application.
-    </p>
-</td>
-                                            <td class="assignee">            coulibaly ELISE
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:32 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:32 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10113" rel="10113" data-issuekey="SUP-38" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-38" href="https://grp31.atlassian.net/browse/SUP-38">SUP-38</a>
-</td>
-                                            <td class="summary"><p>
-                TeamLead- Finaliser le README avec toutes les réponses aux questions critiques.
-    </p>
-</td>
-                                            <td class="assignee">            coulibaly ELISE
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:31 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:31 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10112" rel="10112" data-issuekey="SUP-37" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-37" href="https://grp31.atlassian.net/browse/SUP-37">SUP-37</a>
-</td>
-                                            <td class="summary"><p>
-                TeamLead- Documenter l’ingénierie des prompts pour une tâche spécifique.
-    </p>
-</td>
-                                            <td class="assignee">            coulibaly ELISE
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:31 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:35 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10111" rel="10111" data-issuekey="SUP-36" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-36" href="https://grp31.atlassian.net/browse/SUP-36">SUP-36</a>
-</td>
-                                            <td class="summary"><p>
-                TeamLead-Coordonner l’intégration des différentes branches.
-    </p>
-</td>
-                                            <td class="assignee">            coulibaly ELISE
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:30 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:30 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10110" rel="10110" data-issuekey="SUP-35" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-35" href="https://grp31.atlassian.net/browse/SUP-35">SUP-35</a>
-</td>
-                                            <td class="summary"><p>
-                TeamLead- Mettre en place GitHub Actions (.github/workflows/ci.yml) avec un test minimal.
-    </p>
-</td>
-                                            <td class="assignee">            coulibaly ELISE
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:29 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:29 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10109" rel="10109" data-issuekey="SUP-34" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-34" href="https://grp31.atlassian.net/browse/SUP-34">SUP-34</a>
-</td>
-                                            <td class="summary"><p>
-                TeamLead-Initialiser le README.md avec la description du projet.
-    </p>
-</td>
-                                            <td class="assignee">            coulibaly ELISE
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:28 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:28 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10108" rel="10108" data-issuekey="SUP-33" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-33" href="https://grp31.atlassian.net/browse/SUP-33">SUP-33</a>
-</td>
-                                            <td class="summary"><p>
-                TeamLead-Configurer le tableau jira et inviter l’équipe
-    </p>
-</td>
-                                            <td class="assignee">            coulibaly ELISE
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:27 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:27 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10107" rel="10107" data-issuekey="SUP-32" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-32" href="https://grp31.atlassian.net/browse/SUP-32">SUP-32</a>
-</td>
-                                            <td class="summary"><p>
-                TeamLead-Configurer le tableau jira et inviter l’équipe
-    </p>
-</td>
-                                            <td class="assignee">            coulibaly ELISE
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:26 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:26 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10106" rel="10106" data-issuekey="SUP-31" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-31" href="https://grp31.atlassian.net/browse/SUP-31">SUP-31</a>
-</td>
-                                            <td class="summary"><p>
-                TeamLead-Créer le dépôt GitHub et la structure de dossiers
-    </p>
-</td>
-                                            <td class="assignee">            coulibaly ELISE
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:25 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:25 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-        </tbody>
-    
-</table>
+| Issue Type | Key | Summary | Assignee | Reporter | Priority | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| Task | [SUP-40](https://grp31.atlassian.net/browse/SUP-40) | TeamLead-Valider la reproductibilité du projet. ‎ | coulibaly ELISE | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-39](https://grp31.atlassian.net/browse/SUP-39) | TeamLead-Créer un Dockerfile pour conteneuriser l’application. | coulibaly ELISE | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-38](https://grp31.atlassian.net/browse/SUP-38) | TeamLead- Finaliser le README avec toutes les réponses aux questions critiques. | coulibaly ELISE | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-37](https://grp31.atlassian.net/browse/SUP-37) | TeamLead- Documenter l’ingénierie des prompts pour une tâche spécifique. | coulibaly ELISE | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-36](https://grp31.atlassian.net/browse/SUP-36) | TeamLead-Coordonner l’intégration des différentes branches. | coulibaly ELISE | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-35](https://grp31.atlassian.net/browse/SUP-35) | TeamLead- Mettre en place GitHub Actions (.github/workflows/ci.yml) avec un test minimal. | coulibaly ELISE | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-34](https://grp31.atlassian.net/browse/SUP-34) | TeamLead-Initialiser le README.md avec la description du projet. | coulibaly ELISE | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-33](https://grp31.atlassian.net/browse/SUP-33) | TeamLead-Configurer le tableau jira et inviter l’équipe | coulibaly ELISE | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-32](https://grp31.atlassian.net/browse/SUP-32) | TeamLead-Configurer le tableau jira et inviter l’équipe | coulibaly ELISE | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-31](https://grp31.atlassian.net/browse/SUP-31) | TeamLead-Créer le dépôt GitHub et la structure de dossiers | coulibaly ELISE | Diallo Nassirou Amadou Oumar | Medium | Open |
 
 </details>
 
@@ -403,256 +107,15 @@ Le projet a été géré via **Jira Atlassian**, avec une répartition claire de
 <details>
 <summary>Cliquez pour voir les tâches de dataEngineer</summary>
 
-<table border="1">
-
-                        <thead>
-        <tr class="rowHeader">
-            
-                                                            <th class="colHeaderLink headerrow-issuetype" data-id="issuetype">
-                                                        Issue Type
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-issuekey" data-id="issuekey">
-                                                        Key
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-summary" data-id="summary">
-                                                        Summary
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-assignee" data-id="assignee">
-                                                        Assignee
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-reporter" data-id="reporter">
-                                                        Reporter
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-priority" data-id="priority">
-                                                        Priority
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-status" data-id="status">
-                                                        Status
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-resolution" data-id="resolution">
-                                                        Resolution
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-created" data-id="created">
-                                                        Created
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-updated" data-id="updated">
-                                                        Updated
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-duedate" data-id="duedate">
-                                                        Due date
-                                                    </th>
-                                                                    </tr>
-    </thead>
-    <tbody>
-                    
-
-                <tr id="issuerow10098" rel="10098" data-issuekey="SUP-23" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-23" href="https://grp31.atlassian.net/browse/SUP-23">SUP-23</a>
-</td>
-                                            <td class="summary"><p>
-                Data Engineering_Documenter les fonctions dans le code (docstrings).
-    </p>
-</td>
-                                            <td class="assignee">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:12 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:12 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10097" rel="10097" data-issuekey="SUP-22" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-22" href="https://grp31.atlassian.net/browse/SUP-22">SUP-22</a>
-</td>
-                                            <td class="summary"><p>
-                Data Engineering_ Écrire les tests unitaires dans tests/test_data_processing.py.
-    </p>
-</td>
-                                            <td class="assignee">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:10 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:10 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10096" rel="10096" data-issuekey="SUP-21" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-21" href="https://grp31.atlassian.net/browse/SUP-21">SUP-21</a>
-</td>
-                                            <td class="summary"><p>
-                Data Engineering_ Participer à la rédaction des sections README concernant les données
-    </p>
-</td>
-                                            <td class="assignee">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:05 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:05 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10095" rel="10095" data-issuekey="SUP-20" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-20" href="https://grp31.atlassian.net/browse/SUP-20">SUP-20</a>
-</td>
-                                            <td class="summary"><p>
-                Data Engineering - Creer pipeline de pretraitement complet (NA, encodage, normalisation)
-    </p>
-</td>
-                                            <td class="assignee">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="reporter">            coulibaly ELISE
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 6:30 PM </td>
-                                            <td class="updated"> 14/Mar/26 6:30 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10094" rel="10094" data-issuekey="SUP-19" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-19" href="https://grp31.atlassian.net/browse/SUP-19">SUP-19</a>
-</td>
-                                            <td class="summary"><p>
-                Data Engineering - Implementer optimize_memory(df) dans src/data_processing.py
-    </p>
-</td>
-                                            <td class="assignee">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="reporter">            coulibaly ELISE
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 6:22 PM </td>
-                                            <td class="updated"> 14/Mar/26 6:22 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10093" rel="10093" data-issuekey="SUP-18" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-18" href="https://grp31.atlassian.net/browse/SUP-18">SUP-18</a>
-</td>
-                                            <td class="summary"><p>
-                Data Engineering - Fournir un resume clair des conclusions a l equipe
-    </p>
-</td>
-                                            <td class="assignee">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="reporter">            coulibaly ELISE
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 6:20 PM </td>
-                                            <td class="updated"> 14/Mar/26 6:20 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10092" rel="10092" data-issuekey="SUP-17" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-17" href="https://grp31.atlassian.net/browse/SUP-17">SUP-17</a>
-</td>
-                                            <td class="summary"><p>
-                Data Engineering - Calculer matrice de correlation et identifier features importantes
-    </p>
-</td>
-                                            <td class="assignee">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="reporter">            coulibaly ELISE
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 6:18 PM </td>
-                                            <td class="updated"> 14/Mar/26 6:18 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-        </tbody>
-    
-</table>
+| Issue Type | Key | Summary | Assignee | Reporter | Priority | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| Task | [SUP-23](https://grp31.atlassian.net/browse/SUP-23) | Data Engineering_Documenter les fonctions dans le code (docstrings). | Diallo Nassirou Amadou Oumar | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-22](https://grp31.atlassian.net/browse/SUP-22) | Data Engineering_ Écrire les tests unitaires dans tests/test_data_processing.py. | Diallo Nassirou Amadou Oumar | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-21](https://grp31.atlassian.net/browse/SUP-21) | Data Engineering_ Participer à la rédaction des sections README concernant les données | Diallo Nassirou Amadou Oumar | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-20](https://grp31.atlassian.net/browse/SUP-20) | Data Engineering - Creer pipeline de pretraitement complet (NA, encodage, normalisation) | Diallo Nassirou Amadou Oumar | coulibaly ELISE | Medium | Open |
+| Task | [SUP-19](https://grp31.atlassian.net/browse/SUP-19) | Data Engineering - Implementer optimize_memory(df) dans src/data_processing.py | Diallo Nassirou Amadou Oumar | coulibaly ELISE | Medium | Open |
+| Task | [SUP-18](https://grp31.atlassian.net/browse/SUP-18) | Data Engineering - Fournir un resume clair des conclusions a l equipe | Diallo Nassirou Amadou Oumar | coulibaly ELISE | Medium | Open |
+| Task | [SUP-17](https://grp31.atlassian.net/browse/SUP-17) | Data Engineering - Calculer matrice de correlation et identifier features importantes | Diallo Nassirou Amadou Oumar | coulibaly ELISE | Medium | Open |
 
 </details>
 
@@ -660,630 +123,42 @@ Le projet a été géré via **Jira Atlassian**, avec une répartition claire de
 <details>
 <summary>Cliquez pour voir les tâches de dataAnalyst</summary>
 
-<table border="1">
-
-                        <thead>
-        <tr class="rowHeader">
-            
-                                                            <th class="colHeaderLink headerrow-issuetype" data-id="issuetype">
-                                                        Issue Type
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-issuekey" data-id="issuekey">
-                                                        Key
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-summary" data-id="summary">
-                                                        Summary
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-assignee" data-id="assignee">
-                                                        Assignee
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-reporter" data-id="reporter">
-                                                        Reporter
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-priority" data-id="priority">
-                                                        Priority
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-status" data-id="status">
-                                                        Status
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-resolution" data-id="resolution">
-                                                        Resolution
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-created" data-id="created">
-                                                        Created
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-updated" data-id="updated">
-                                                        Updated
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-duedate" data-id="duedate">
-                                                        Due date
-                                                    </th>
-                                                                    </tr>
-    </thead>
-    <tbody>
-                    
-
-                <tr id="issuerow10085" rel="10085" data-issuekey="SUP-10" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-10" href="https://grp31.atlassian.net/browse/SUP-10">SUP-10</a>
-</td>
-                                            <td class="summary"><p>
-                EDA - Verification de l&#39;equilibre des classes
-    </p>
-</td>
-                                            <td class="assignee">            Ange Sarah
-    </td>
-                                            <td class="reporter">            coulibaly ELISE
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 6:07 PM </td>
-                                            <td class="updated"> 14/Mar/26 6:07 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10084" rel="10084" data-issuekey="SUP-9" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-9" href="https://grp31.atlassian.net/browse/SUP-9">SUP-9</a>
-</td>
-                                            <td class="summary"><p>
-                EDA - Détection et traitement des outliers
-    </p>
-</td>
-                                            <td class="assignee">            Ange Sarah
-    </td>
-                                            <td class="reporter">            coulibaly ELISE
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 6:07 PM </td>
-                                            <td class="updated"> 14/Mar/26 6:07 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10083" rel="10083" data-issuekey="SUP-8" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-8" href="https://grp31.atlassian.net/browse/SUP-8">SUP-8</a>
-</td>
-                                            <td class="summary"><p>
-                EDA - Analyse des valeurs manquantes
-    </p>
-</td>
-                                            <td class="assignee">            Ange Sarah
-    </td>
-                                            <td class="reporter">            coulibaly ELISE
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 6:07 PM </td>
-                                            <td class="updated"> 14/Mar/26 6:07 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-        </tbody>
-    
-</table>
+| Issue Type | Key | Summary | Assignee | Reporter | Priority | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| Task | [SUP-10](https://grp31.atlassian.net/browse/SUP-10) | EDA - Verification de l&#39;equilibre des classes | Ange Sarah | coulibaly ELISE | Medium | Open |
+| Task | [SUP-9](https://grp31.atlassian.net/browse/SUP-9) | EDA - Détection et traitement des outliers | Ange Sarah | coulibaly ELISE | Medium | Open |
+| Task | [SUP-8](https://grp31.atlassian.net/browse/SUP-8) | EDA - Analyse des valeurs manquantes | Ange Sarah | coulibaly ELISE | Medium | Open |
 
 </details>
 
-### 👤 Rôle : IA Engineer
+### 👤 Rôle : iaEngineer
 <details>
-<summary>Cliquez pour voir les tâches de IA Engineer</summary>
+<summary>Cliquez pour voir les tâches de iaEngineer</summary>
 
-<table border="1">
-
-                        <thead>
-        <tr class="rowHeader">
-            
-                                                            <th class="colHeaderLink headerrow-issuetype" data-id="issuetype">
-                                                        Issue Type
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-issuekey" data-id="issuekey">
-                                                        Key
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-summary" data-id="summary">
-                                                        Summary
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-assignee" data-id="assignee">
-                                                        Assignee
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-reporter" data-id="reporter">
-                                                        Reporter
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-priority" data-id="priority">
-                                                        Priority
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-status" data-id="status">
-                                                        Status
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-resolution" data-id="resolution">
-                                                        Resolution
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-created" data-id="created">
-                                                        Created
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-updated" data-id="updated">
-                                                        Updated
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-duedate" data-id="duedate">
-                                                        Due date
-                                                    </th>
-                                                                    </tr>
-    </thead>
-    <tbody>
-                    
-
-                <tr id="issuerow10105" rel="10105" data-issuekey="SUP-30" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-30" href="https://grp31.atlassian.net/browse/SUP-30">SUP-30</a>
-</td>
-                                            <td class="summary"><p>
-                ML-Engineer-Fournir à AD les informations nécessaires pour l’intégration.
-    </p>
-</td>
-                                            <td class="assignee">            MOHAMED JOUAHAR
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:20 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:20 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10104" rel="10104" data-issuekey="SUP-29" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-29" href="https://grp31.atlassian.net/browse/SUP-29">SUP-29</a>
-</td>
-                                            <td class="summary"><p>
-                ML-Engineer- Écrire les tests dans tests/test_model.py.
-    </p>
-</td>
-                                            <td class="assignee">            MOHAMED JOUAHAR
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:19 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:19 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10103" rel="10103" data-issuekey="SUP-28" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-28" href="https://grp31.atlassian.net/browse/SUP-28">SUP-28</a>
-</td>
-                                            <td class="summary"><p>
-                ML-Engineer- Intégrer SHAP (valeurs, graphiques : summary plot, dependance plot, force plot).
-    </p>
-</td>
-                                            <td class="assignee">            MOHAMED JOUAHAR
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:18 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:18 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10102" rel="10102" data-issuekey="SUP-27" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-27" href="https://grp31.atlassian.net/browse/SUP-27">SUP-27</a>
-</td>
-                                            <td class="summary"><p>
-                ML-Engineer- Sauvegarder le modèle final (apk) et le préprocesseur associé..
-    </p>
-</td>
-                                            <td class="assignee">            MOHAMED JOUAHAR
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:17 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:17 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10101" rel="10101" data-issuekey="SUP-26" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-26" href="https://grp31.atlassian.net/browse/SUP-26">SUP-26</a>
-</td>
-                                            <td class="summary"><p>
-                ML-Engineer-Comparer les performances et sélectionner le meilleur modèle.
-    </p>
-</td>
-                                            <td class="assignee">            MOHAMED JOUAHAR
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:16 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:16 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10100" rel="10100" data-issuekey="SUP-25" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-25" href="https://grp31.atlassian.net/browse/SUP-25">SUP-25</a>
-</td>
-                                            <td class="summary"><p>
-                ML-Engineer- Implémenter l’entraînement et l’évaluation avec validation croisée.
-    </p>
-</td>
-                                            <td class="assignee">            MOHAMED JOUAHAR
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:15 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:15 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10099" rel="10099" data-issuekey="SUP-24" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-24" href="https://grp31.atlassian.net/browse/SUP-24">SUP-24</a>
-</td>
-                                            <td class="summary"><p>
-                ML-Engineer- Entraîner au moins trois modèles (SVM, Random Forest, LightGBM, CatBoost
-    </p>
-</td>
-                                            <td class="assignee">            MOHAMED JOUAHAR
-    </td>
-                                            <td class="reporter">            Diallo Nassirou Amadou Oumar
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 10:14 PM </td>
-                                            <td class="updated"> 14/Mar/26 10:14 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-        </tbody>
-    
-</table>
+| Issue Type | Key | Summary | Assignee | Reporter | Priority | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| Task | [SUP-30](https://grp31.atlassian.net/browse/SUP-30) | ML-Engineer-Fournir à AD les informations nécessaires pour l’intégration. | MOHAMED JOUAHAR | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-29](https://grp31.atlassian.net/browse/SUP-29) | ML-Engineer- Écrire les tests dans tests/test_model.py. | MOHAMED JOUAHAR | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-28](https://grp31.atlassian.net/browse/SUP-28) | ML-Engineer- Intégrer SHAP (valeurs, graphiques : summary plot, dependance plot, force plot). | MOHAMED JOUAHAR | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-27](https://grp31.atlassian.net/browse/SUP-27) | ML-Engineer- Sauvegarder le modèle final (apk) et le préprocesseur associé.. | MOHAMED JOUAHAR | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-26](https://grp31.atlassian.net/browse/SUP-26) | ML-Engineer-Comparer les performances et sélectionner le meilleur modèle. | MOHAMED JOUAHAR | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-25](https://grp31.atlassian.net/browse/SUP-25) | ML-Engineer- Implémenter l’entraînement et l’évaluation avec validation croisée. | MOHAMED JOUAHAR | Diallo Nassirou Amadou Oumar | Medium | Open |
+| Task | [SUP-24](https://grp31.atlassian.net/browse/SUP-24) | ML-Engineer- Entraîner au moins trois modèles (SVM, Random Forest, LightGBM, CatBoost | MOHAMED JOUAHAR | Diallo Nassirou Amadou Oumar | Medium | Open |
 
 </details>
 
-### 👤 Rôle : Web dev
+### 👤 Rôle : webdev
 <details>
-<summary>Cliquez pour voir les tâches de Web dev</summary>
+<summary>Cliquez pour voir les tâches de webdev</summary>
 
-<table border="1">
-
-                        <thead>
-        <tr class="rowHeader">
-            
-                                                            <th class="colHeaderLink headerrow-issuetype" data-id="issuetype">
-                                                        Issue Type
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-issuekey" data-id="issuekey">
-                                                        Key
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-summary" data-id="summary">
-                                                        Summary
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-assignee" data-id="assignee">
-                                                        Assignee
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-reporter" data-id="reporter">
-                                                        Reporter
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-priority" data-id="priority">
-                                                        Priority
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-status" data-id="status">
-                                                        Status
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-resolution" data-id="resolution">
-                                                        Resolution
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-created" data-id="created">
-                                                        Created
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-updated" data-id="updated">
-                                                        Updated
-                                                    </th>
-                                                
-                                                            <th class="colHeaderLink headerrow-duedate" data-id="duedate">
-                                                        Due date
-                                                    </th>
-                                                                    </tr>
-    </thead>
-    <tbody>
-                    
-
-                <tr id="issuerow10091" rel="10091" data-issuekey="SUP-16" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-16" href="https://grp31.atlassian.net/browse/SUP-16">SUP-16</a>
-</td>
-                                            <td class="summary"><p>
-                Streamlit App - Tester l’application manuellement
-    </p>
-</td>
-                                            <td class="assignee">            Sanogo
-    </td>
-                                            <td class="reporter">            coulibaly ELISE
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 6:17 PM </td>
-                                            <td class="updated"> 14/Mar/26 6:17 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10090" rel="10090" data-issuekey="SUP-15" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-15" href="https://grp31.atlassian.net/browse/SUP-15">SUP-15</a>
-</td>
-                                            <td class="summary"><p>
-                Streamlit App - Intégrer visualisations SHAP
-    </p>
-</td>
-                                            <td class="assignee">            Sanogo
-    </td>
-                                            <td class="reporter">            coulibaly ELISE
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 6:17 PM </td>
-                                            <td class="updated"> 14/Mar/26 6:17 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10089" rel="10089" data-issuekey="SUP-14" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-14" href="https://grp31.atlassian.net/browse/SUP-14">SUP-14</a>
-</td>
-                                            <td class="summary"><p>
-                Streamlit App - Afficher probabilité et classe prédite
-    </p>
-</td>
-                                            <td class="assignee">            Sanogo
-    </td>
-                                            <td class="reporter">            coulibaly ELISE
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 6:17 PM </td>
-                                            <td class="updated"> 14/Mar/26 6:17 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10088" rel="10088" data-issuekey="SUP-13" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-13" href="https://grp31.atlassian.net/browse/SUP-13">SUP-13</a>
-</td>
-                                            <td class="summary"><p>
-                Streamlit App - Charger modèle et préprocesseur
-    </p>
-</td>
-                                            <td class="assignee">            Sanogo
-    </td>
-                                            <td class="reporter">            coulibaly ELISE
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 6:11 PM </td>
-                                            <td class="updated"> 14/Mar/26 6:11 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10087" rel="10087" data-issuekey="SUP-12" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-12" href="https://grp31.atlassian.net/browse/SUP-12">SUP-12</a>
-</td>
-                                            <td class="summary"><p>
-                Streamlit App - Concevoir interface utilisateur
-    </p>
-</td>
-                                            <td class="assignee">            Sanogo
-    </td>
-                                            <td class="reporter">            coulibaly ELISE
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 6:11 PM </td>
-                                            <td class="updated"> 14/Mar/26 6:11 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-
-
-                <tr id="issuerow10086" rel="10086" data-issuekey="SUP-11" class="issuerow">
-                                            <td class="issuetype">    Task
-</td>
-                                            <td class="issuekey">
-
-    <a class="issue-link" data-issue-key="SUP-11" href="https://grp31.atlassian.net/browse/SUP-11">SUP-11</a>
-</td>
-                                            <td class="summary"><p>
-                Streamlit App - Develop main application (app/app.py)
-    </p>
-</td>
-                                            <td class="assignee">            Sanogo
-    </td>
-                                            <td class="reporter">            coulibaly ELISE
-    </td>
-                                            <td class="priority">           Medium
-    </td>
-                                            <td class="status">
-                <span class=" jira-issue-status-lozenge aui-lozenge jira-issue-status-lozenge-blue-gray jira-issue-status-lozenge-new aui-lozenge-subtle jira-issue-status-lozenge-max-width-medium" data-tooltip="&lt;span class=&quot;jira-issue-status-tooltip-title&quot;&gt;Open&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;jira-issue-status-tooltip-desc&quot;&gt;The issue is open and ready for the assignee to start work on it.&lt;/span&gt;">Open</span>    </td>
-                                            <td class="resolution">    <em>Unresolved</em>
-</td>
-                                            <td class="created"> 14/Mar/26 6:09 PM </td>
-                                            <td class="updated"> 14/Mar/26 6:09 PM </td>
-                                            <td class="duedate">    &nbsp;
-</td>
-                    </tr>
-        </tbody>
-    
-</table>
+| Issue Type | Key | Summary | Assignee | Reporter | Priority | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| Task | [SUP-16](https://grp31.atlassian.net/browse/SUP-16) | Streamlit App - Tester l’application manuellement | Sanogo | coulibaly ELISE | Medium | Open |
+| Task | [SUP-15](https://grp31.atlassian.net/browse/SUP-15) | Streamlit App - Intégrer visualisations SHAP | Sanogo | coulibaly ELISE | Medium | Open |
+| Task | [SUP-14](https://grp31.atlassian.net/browse/SUP-14) | Streamlit App - Afficher probabilité et classe prédite | Sanogo | coulibaly ELISE | Medium | Open |
+| Task | [SUP-13](https://grp31.atlassian.net/browse/SUP-13) | Streamlit App - Charger modèle et préprocesseur | Sanogo | coulibaly ELISE | Medium | Open |
+| Task | [SUP-12](https://grp31.atlassian.net/browse/SUP-12) | Streamlit App - Concevoir interface utilisateur | Sanogo | coulibaly ELISE | Medium | Open |
+| Task | [SUP-11](https://grp31.atlassian.net/browse/SUP-11) | Streamlit App - Develop main application (app/app.py) | Sanogo | coulibaly ELISE | Medium | Open |
 
 </details>
 
@@ -1342,20 +217,26 @@ python src/data_processing.py
 ### 2. Entraînement des modèles (une seule fois)
 ```bash
 python src/train_model.py
-# → models/random_forest.joblib (+ 3 autres modèles)
+# → models/random_forest_model.pkl
 ```
 
 ### 3. Tests unitaires
 ```bash
 python -m pytest tests/ --rootdir="." -q
-# 34 passed
+# 13 passed
 ```
 
 ### 4. Lancement de l'application web
 ```bash
-uvicorn app.app:app --host 0.0.0.0 --port 8000 --reload
-# → http://localhost:8000
+streamlit run app/app.py
+# → http://localhost:8501
 ```
+
+### 🧠 Prompt Engineering Task
+L'IA a été utilisée pour :
+1. **Optimisation** : Génération de la fonction `optimize_memory` pour réduire l'empreinte mémoire de 18%.
+2. **Refactoring** : Migration de l'interface FastAPI vers Streamlit pour une intégration native des graphiques SHAP.
+3. **Robustesse** : Création de tests unitaires dynamiques s'adaptant aux colonnes du préprocesseur.
 
 ### Docker
 ```bash
@@ -1367,7 +248,7 @@ docker run -p 8000:8000 pediappendix
 
 ## Paradigme de développement
 
-Ce projet suit un paradigme **fonctionnel strict** :
+Ce projet suit un paradigme **fonctionnel ** :
 - **Une fonction = une tâche précise et testable**
 - **Un test = une fonction = une assertion**
 - Pas d'état global mutable entre fonctions
@@ -1379,6 +260,63 @@ Ce projet suit un paradigme **fonctionnel strict** :
 
 Voir le dossier [`MD/`](MD/README.md) pour la documentation détaillée
 de chaque module avec les sorties et décisions de conception.
+
+---
+
+## 🤖 Usage de l'IA et Maîtrise du Code
+
+Au cours de ce projet de Coding Week, nous avons fait le choix stratégique de tirer parti des outils d'Intelligence Artificielle (tels que les LLMs et les assistants virtuels de codage) afin d'accélérer notre cycle de développement, d'optimiser notre productivité globale et de nous assister dans la rédaction du code *boilerplate* (code répétitif). L'IA a été un véritable copilote au quotidien, nous permettant de franchir rapidement les obstacles techniques, de déboguer des erreurs complexes, de refactoriser notre architecture (notamment lors de la transition d'un backend FastAPI vers une application Streamlit unifiée) et de structurer nos pipelines de données avec une grande rapidité d'exécution.
+
+Cependant, nous avons mis un point d'honneur à rester les **maîtres d'œuvre absolus** de ce projet. Loin d'accepter aveuglément et passivement les suggestions du code généré, nous avons systématiquement relu, analysé, testé et validé chaque bloc logique avant son intégration. Pour garantir notre compréhension totale des mécanismes sous-jacents — qu'il s'agisse du fonctionnement mathématique des algorithmes de Machine Learning, des subtilités de conception des architectures de données, ou encore des fondements de l'explicabilité algorithmique avec SHAP —, nous avons couplé l'usage de l'IA à une démarche d'apprentissage humaine, proactive et rigoureuse. Nous avons activement cherché à démystifier la "magie" du code en consultant assidûment la documentation officielle des bibliothèques, en suivant activement de nombreuses formations spécialisées et tutoriels approfondis sur YouTube, en lisant des articles techniques pointus, et en débattant des meilleures pratiques algorithmiques au sein de l'équipe. 
+
+Cette approche résolument "hybride" nous a permis de capitaliser au maximum sur l'efficacité brute apportée par l'Intelligence Artificielle, tout en consolidant durablement nos propres compétences de Data Scientists, de Data Engineers et de développeurs métier. C'était la condition *sine qua non* pour assurer la robustesse, la sécurité, l'intégrité intellectuelle et la pertinence clinique de notre application d'aide au diagnostic clinique.
+
+---
+
+## 📚 Ce que nous avons appris (Learnings)
+
+Tout au long de ce projet intensif, notre équipe a eu l'opportunité de plonger au cœur d'un cas d'usage réel et complexe. De la donnée brute jusqu'au déploiement Web, cette Coding Week nous a permis de consolider des compétences autant techniques qu'organisationnelles, dépassant largement le simple cadre du développement logiciel classique :
+
+### 1. Organisation, Agilité et Collaboration Industrielle
+Nous avons appris à structurer et à cadencer notre charge de travail en adoptant des méthodologies agiles. En utilisant Jira pour la répartition et le suivi granulaire des tickets de développement, et Git/GitHub pour le versioning asynchrone de notre code, nous nous sommes confrontés aux réalités du travail d'équipe. La séparation explicite des responsabilités (Teamlead, Data Engineer, ML Engineer, Web Developer, Data Analyst) nous a contraints à communiquer efficacement, à documenter notre code, à gérer les conflits de fusion (*merge conflicts*) et à assurer une intégration fluide des différents sous-systèmes logiciels.
+
+### 2. Ingénierie des Données (Data Engineering) Solide
+Nous avons saisi fondamentalement qu'un projet de Data Science ne se résume pas à l'algorithme : l'adage "Garbage In, Garbage Out" n'a jamais été aussi vrai. Nous avons conçu de toutes pièces un pipeline de prétraitement robuste, modulaire et encapsulé en adoptant un paradigme fonctionnel. Nous y avons intégré l'optimisation de l'empreinte mémoire, l'encodage ciblé des variables catégorielles et la projection via `StandardScaler` (tout en maîtrisant les risques de *Data Leakage*). Plus encore, soumettre l'intégralité de ce cycle de données à des tests unitaires systématiques ("Test-Driven" avec *Pytest*) nous a inculqué l'exigence de la fiabilité dans le domaine médical.
+
+### 3. Machine Learning et Modélisation Avancée Appliquée
+Face à une problématique de diagnostic de santé requérant un grand degré de certitude, nous avons compris qu'il fallait tester et confronter de nombreux algorithmes (Random Forest, SVM, LightGBM, CatBoost, Logistic Regression). Au-delà du code d'entraînement, nous avons surtout appris à lire et interpréter les métriques d'évaluation ; nous avons rejeté le seul recours à l'Exactitude globale (Accuracy) au profit de l'aire sous la courbe (AUC-ROC) et du F1-Score pour appréhender correctement une distribution asymétrique de patients malades/sains.
+
+### 4. La puissance de l'Explicabilité et de la Transparence Médicale (XAI)
+Ce fut l'une de nos révélations majeures : dans l'écosystème médical moderne, la prédiction d'un modèle "Boîte Noire", même avec une précision de 99%, est dénuée de valeur si le praticien ne peut pas la comprendre et en assumer la responsabilité. L'intégration technique de la théorie des jeux avec la bibliothèque SHAP (*Shapley Additive exPlanations*) a été un défi passionnant. Nous sommes maintenant capables de générer des graphiques locaux ("Waterfalls") pour justifier la moindre prédiction probabiliste, décantant mathématiquement le poids d'un taux de Leucocytes ou de la fièvre dans la décision finale d'urgence chirurgicale.
+
+### 5. Développement Applicatif Interactif Data-Driven (Streamlit)
+Pour conclure le cycle de vie du modèle, nous avons exploré *Streamlit* pour orchestrer le passage de "Script Python local" à "Dashboard Web Universel". Nous avons appris comment concevoir une interface Web "Responsive", ergonomique pour un futur corps médical (gestion par formulaires, sidebar, spinners de chargement), comment lier nos modèles sérialisés (*joblib*) à des clics d'utilisateurs en temps réel, et comment assurer la génération de graphiques dynamiques sur le navigateur.
+
+## ⚠️ Limites du Projet
+
+Malgré ses bonnes performances, PediAppendix présente certaines limites intrinsèques :
+1. **Taille et représentativité du dataset :** Entraîné sur 776 patients provenant d'une seule source hospitalière (Regensburg), le modèle pourrait souffrir de biais et mal généraliser sur d'autres populations ou protocoles hospitaliers différents.
+2. **Dépendant de la qualité de saisie :** Le système dépend de la précision de facteurs subjectifs (ex: niveau de douleur) et de l'inter-observabilité des médecins.
+3. **Limites de l'échographie :** Le diamètre de l'appendice est une variable cruciale dans notre modèle, mais en pratique, l'appendice n'est pas toujours visualisable à l'échographie (à cause de gaz intestinaux, par exemple). Le modèle gère mal cette "absence" sans imputation préalable.
+4. **Prise de décision clinique :** Le modèle gère une probabilité binaire brute, sans inclure le diagnostic différentiel médical (ex : gastro-entérite, adénite mésentérique).
+
+## 🔮 Perspectives et Améliorations (Pousser les limites)
+
+Pour amener PediAppendix du statut de "Proof of Concept" (POC) à un véritable outil certifié (Dispositif Médical) :
+- **Validation multicentrique :** Ré-entraîner et valider le modèle sur des jeux de données provenant de plusieurs hôpitaux internationaux pour garantir sa robustesse.
+- **Gestion dynamique des valeurs manquantes :** Intégrer des algorithmes robustes capables de faire des prédictions (ex: XGBoost/LightGBM natifs) même lorsqu'une échographie n'a pas pu être réalisée au moment de l'admission.
+- **Déploiement Cloud et MLOps :** Intégrer le modèle dans une infrastructure MLflow complète (suivi de data drift, ré-entraînement continu).
+- **Approbation éthique et légale :** Préparer le dossier technique de conformité réglementaire (RGPD pour la confidentialité des données patients, et directive européenne sur les Dispositifs Médicaux).
+
+## 🏥 Application Pratique sur le Terrain
+
+En pratique, **PediAppendix n'a pas vocation à remplacer le médecin**.
+Il agit comme un outil de **triage avancé (Second Opinion System)** aux urgences pédiatriques :
+1. L'infirmier(e) d'accueil ou l'interne remplit rapidement les constantes vitales et les données cliniques simples dans la tablette.
+2. Le modèle calcule le score de risque instantanément.
+3. **Si le risque est très élevé**, l'alerte prévient le chirurgien de garde pour une intervention rapide (réduction du risque de péritonite).
+4. **Si le risque est intermédiaire ou faible**, cela aide le médecin senior à justifier une mise en observation prudente au lieu de prescrire un scanner systématique (réduisant ainsi l'exposition de l'enfant aux radiations).
+5. **Le graphique SHAP** est imprimé et glissé dans le dossier médical pour justifier légalement la décision médicale prise, en toute transparence pour les parents.
 
 ---
 

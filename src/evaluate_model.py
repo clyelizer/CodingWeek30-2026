@@ -36,20 +36,48 @@ def evaluate_model(model, X_train, y_train, X_test, y_test, model_name='Model', 
     print(f"{'─'*45}")
     for k, v in metrics.items():
         print(f"  {k:<22}: {v:.4f}")
+    
+    cm = confusion_matrix(y_test, y_pred)
     print("\nMatrice de confusion :")
-    print(confusion_matrix(y_test, y_pred))
+    print(cm)
     print("\n" + classification_report(y_test, y_pred, zero_division=0))
 
-    # Courbe ROC (optionnelle)
+    # Sauvegarde des figures (optionnelle)
     if save_roc:
         os.makedirs(output_dir, exist_ok=True)
+        safe_name = model_name.replace(' ', '_')
+
+        # 1. Courbe ROC
         fig, ax = plt.subplots(figsize=(6,5))
         RocCurveDisplay.from_predictions(y_test, y_proba, ax=ax, name=model_name)
         ax.set_title(f"ROC Curve - {model_name}")
-        path = os.path.join(output_dir, f"roc_{model_name.replace(' ', '_')}.png")
         plt.tight_layout()
-        plt.savefig(path, dpi=150)
+        plt.savefig(os.path.join(output_dir, f"roc_{safe_name}.png"), dpi=150)
         plt.close()
-        print(f"ROC curve saved → {path}")
+
+        # 2. Courbe Precision-Recall
+        from sklearn.metrics import PrecisionRecallDisplay
+        fig, ax = plt.subplots(figsize=(6,5))
+        PrecisionRecallDisplay.from_predictions(y_test, y_proba, ax=ax, name=model_name)
+        ax.set_title(f"PR Curve - {model_name}")
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, f"pr_{safe_name}.png"), dpi=150)
+        plt.close()
+
+        # 3. Matrice de confusion (Seaborn heatmap)
+        try:
+            import seaborn as sns
+            fig, ax = plt.subplots(figsize=(5,4))
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax)
+            ax.set_xlabel('Prédit')
+            ax.set_ylabel('Réel')
+            ax.set_title(f"Confusion Matrix - {model_name}")
+            plt.tight_layout()
+            plt.savefig(os.path.join(output_dir, f"cm_{safe_name}.png"), dpi=150)
+            plt.close()
+        except ImportError:
+            pass
+
+        print(f"      Figures sauvegardées dans {output_dir}")
 
     return metrics

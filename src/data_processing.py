@@ -3,8 +3,8 @@ src/data_processing.py
 ======================
 Pipeline de préparation des données — diagnostic pédiatrique de l'appendicite.
 
-Paradigme fonctionnel strict :
-  - Une fonction = une tâche précise et testable.
+Paradigme fonctionnel : une étape = une fonction = une tâche précise.
+ et testable.
   - Aucun effet de bord global : chaque fonction prend un DataFrame en entrée
     et retourne un nouveau DataFrame (pas de mutation en place).
   - Chaque fonction est couverte par exactement un test unitaire avec une
@@ -25,6 +25,8 @@ import pathlib
 from typing import Tuple
 
 import pandas as pd
+import numpy as np
+import os
 import joblib
 from sklearn.model_selection import train_test_split
 
@@ -64,6 +66,43 @@ BINARY_COLS: list[str] = [
 # ---------------------------------------------------------------------------
 # Fonctions du pipeline
 # ---------------------------------------------------------------------------
+
+def optimize_memory(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Optimise la mémoire consommée par le DataFrame en convertissant 
+    les types numériques vers les plus petits possibles (int8, float32, etc.).
+    """
+    df_opt = df.copy()
+    start_mem = df_opt.memory_usage().sum() / 1024**2
+    
+    for col in df_opt.columns:
+        col_type = df_opt[col].dtype
+        
+        # On ne traite que les colonnes purement numériques
+        if pd.api.types.is_numeric_dtype(col_type):
+            c_min = df_opt[col].min()
+            c_max = df_opt[col].max()
+            
+            if str(col_type)[:3] == 'int':
+                if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
+                    df_opt[col] = df_opt[col].astype(np.int8)
+                elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
+                    df_opt[col] = df_opt[col].astype(np.int16)
+                elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
+                    df_opt[col] = df_opt[col].astype(np.int32)
+                else:
+                    df_opt[col] = df_opt[col].astype(np.int64)
+            else:
+                if c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
+                    df_opt[col] = df_opt[col].astype(np.float32)
+                else:
+                    df_opt[col] = df_opt[col].astype(np.float64)
+                    
+    end_mem = df_opt.memory_usage().sum() / 1024**2
+    print(f"      Optimisation mémoire : {start_mem:.2f} MB \u2192 {end_mem:.2f} MB (Gain: {100*(start_mem-end_mem)/start_mem:.1f}%)")
+    return df_opt
+
+
 
 def load_raw_data(path: str | pathlib.Path) -> pd.DataFrame:
     """Charge le fichier Excel et retourne un DataFrame."""
@@ -153,17 +192,40 @@ def save_processed_data(
     return out_path
 
 
+from sklearn.preprocessing import StandardScaler
+
+def load_and_preprocess(path, target_col='Diagnosis', test_size=0.2, random_state=42):
+    """Charge et prépare les données pour l'entraînement."""
+    df_raw = load_raw_data(path)
+    df_opt = optimize_memory(df_raw)
+    df_sel = select_columns(df_opt, target_col=target_col)
+    df_enc = encode_binary_columns(df_sel)
+    
+    X, y = split_features_target(df_enc, target_col=target_col)
+    X_train, X_test, y_train, y_test = split_train_test(X, y, test_size=test_size, random_state=random_state)
+    
+    # Prétraitement : Normalisation
+    scaler = StandardScaler()
+    X_train_scaled = pd.DataFrame(scaler.fit_transform(X_train), columns=X_train.columns, index=X_train.index)
+    X_test_scaled = pd.DataFrame(scaler.transform(X_test), columns=X_test.columns, index=X_test.index)
+    
+    # Sauvegarde du préprocesseur pour usage ultérieur (App, Tests)
+    os.makedirs('models', exist_ok=True)
+    joblib.dump(scaler, 'models/preprocessor.pkl')
+    
+    return X_train_scaled, X_test_scaled, y_train, y_test, list(X.columns)
+
+def get_feature_names(preprocessor=None):
+    """Retourne la liste des features de l'interface."""
+    return FEATURE_COLS
+
 def run_pipeline(
     raw_path: str | pathlib.Path,
     output_dir: str | pathlib.Path,
 ) -> pathlib.Path:
     """Enchaîne toutes les étapes du pipeline."""
-    df_raw      = load_raw_data(raw_path)
-    df_selected = select_columns(df_raw)
-    df_encoded  = encode_binary_columns(df_selected)
-    X, y        = split_features_target(df_encoded)
-    X_train, X_test, y_train, y_test = split_train_test(X, y)
-    out_path    = save_processed_data(X_train, X_test, y_train, y_test, output_dir)
+    X_train, X_test, y_train, y_test, _ = load_and_preprocess(raw_path)
+    out_path = save_processed_data(X_train, X_test, y_train, y_test, output_dir)
     return out_path
 
 
