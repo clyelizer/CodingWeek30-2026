@@ -33,11 +33,6 @@ Nous tenons à exprimer notre profonde gratitude envers :
 **Dataset :** Regensburg Pediatric Appendicitis (UCI), n = 776 patients.  
 **Modèle retenu :** Random Forest — AUC-ROC = **0.9359** (Best model).
 
-### 📈 Résultats et Interprétabilité
-
-| Courbe ROC (Performance) | Importance des Features (SHAP) |
-|:---:|:---:|
-| ![ROC Curve](file:///c:/Users/clyel/Desktop/new/CodingWeek30-2026/reports/figures/roc_Random_Forest.png) | ![SHAP Summary](file:///c:/Users/clyel/Desktop/new/CodingWeek30-2026/reports/figures/shap_summary.png) |
 
 > [!NOTE]
 > Le modèle Random Forest a été sélectionné pour sa stabilité en validation croisée (moyenne 0.92) et son excellente capacité de généralisation sur le jeu de test.
