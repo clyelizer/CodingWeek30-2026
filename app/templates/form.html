@@ -153,7 +153,6 @@
             <div class="card main-card">
 
                 <div class="card-header text-white text-center">
-                    <img src="/static/ecole.png" alt="Logo" class="img-fluid mb-3" style="max-height: 52px;">
                     <h4 class="mb-1">Diagnostic Appendicite</h4>
                     <p>Système expert d'aide à la décision clinique</p>
                 </div>
@@ -167,14 +166,14 @@
                                 <div class="col-md-6">
                                     <label class="form-label">Âge</label>
                                     <div class="input-group">
-                                        <input type="number" step="0.01" name="age" class="form-control" placeholder="10" min="0" max="18" required>
+                                        <input type="number" step="0.01" name="age" class="form-control" placeholder="10" min="0" max="100" required>
                                         <span class="input-group-text">ans</span>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Température corporelle</label>
                                     <div class="input-group">
-                                        <input type="number" step="0.1" name="body_temperature" class="form-control" placeholder="37.2" required>
+                                        <input type="number" step="0.1" name="body_temperature" class="form-control" placeholder="37.2" min="35" max="42" required>
                                         <span class="input-group-text">°C</span>
                                     </div>
                                 </div>
