@@ -263,15 +263,34 @@ de chaque module avec les sorties et décisions de conception.
 
 ---
 
+## 🤖 Usage de l'IA et Maîtrise du Code
+
+Au cours de ce projet de Coding Week, nous avons fait le choix stratégique de tirer parti des outils d'Intelligence Artificielle (tels que les LLMs et les assistants virtuels de codage) afin d'accélérer notre cycle de développement, d'optimiser notre productivité globale et de nous assister dans la rédaction du code *boilerplate* (code répétitif). L'IA a été un véritable copilote au quotidien, nous permettant de franchir rapidement les obstacles techniques, de déboguer des erreurs complexes, de refactoriser notre architecture (notamment lors de la transition d'un backend FastAPI vers une application Streamlit unifiée) et de structurer nos pipelines de données avec une grande rapidité d'exécution.
+
+Cependant, nous avons mis un point d'honneur à rester les **maîtres d'œuvre absolus** de ce projet. Loin d'accepter aveuglément et passivement les suggestions du code généré, nous avons systématiquement relu, analysé, testé et validé chaque bloc logique avant son intégration. Pour garantir notre compréhension totale des mécanismes sous-jacents — qu'il s'agisse du fonctionnement mathématique des algorithmes de Machine Learning, des subtilités de conception des architectures de données, ou encore des fondements de l'explicabilité algorithmique avec SHAP —, nous avons couplé l'usage de l'IA à une démarche d'apprentissage humaine, proactive et rigoureuse. Nous avons activement cherché à démystifier la "magie" du code en consultant assidûment la documentation officielle des bibliothèques, en suivant activement de nombreuses formations spécialisées et tutoriels approfondis sur YouTube, en lisant des articles techniques pointus, et en débattant des meilleures pratiques algorithmiques au sein de l'équipe. 
+
+Cette approche résolument "hybride" nous a permis de capitaliser au maximum sur l'efficacité brute apportée par l'Intelligence Artificielle, tout en consolidant durablement nos propres compétences de Data Scientists, de Data Engineers et de développeurs métier. C'était la condition *sine qua non* pour assurer la robustesse, la sécurité, l'intégrité intellectuelle et la pertinence clinique de notre application d'aide au diagnostic clinique.
+
+---
+
 ## 📚 Ce que nous avons appris (Learnings)
 
-Tout au long de cette Coding Week, notre équipe a pu mettre en pratique et consolider de nombreuses compétences techniques et organisationnelles :
-- **Gestion de projet et collaboration :** Utilisation intensive de Jira pour le suivi des tâches et Git/GitHub pour le versioning, avec une séparation stricte des rôles (Teamlead, Data Engineer, ML Engineer, Web Dev, Data Analyst).
-- **Pipeline Data Engineering robuste :** Création d'un pipeline fonctionnel de traitement de données (encodage, scaling, optimisation mémoire) modulaire et entièrement testé unitairement.
-- **Sélection et Optimisation de Modèles (Machine Learning) :** Traitement d'un problème médical sensible, impliquant de tester plusieurs modèles (Random Forest, LightGBM, CatBoost) et de justifier le choix par des métriques fiables (AUC-ROC, F1-Score).
-- **Interprétabilité des Modèles Locaux (XAI) :** Maîtrise de la bibliothèque SHAP pour transformer une prédiction "boîte noire" en une décision médicale justifiable grâce aux graphiques "Waterfall".
-- **Développement Web (Streamlit) :** Conception rapide et itérative d'une interface utilisateur interactive mettant en valeur le modèle prédictif de manière intuitive.
-- **Prompt Engineering :** Utilisation d'assistants IA pour l'optimisation, la génération de code boilerplate et le refactoring d'architecture (FastAPI vers Streamlit).
+Tout au long de ce projet intensif, notre équipe a eu l'opportunité de plonger au cœur d'un cas d'usage réel et complexe. De la donnée brute jusqu'au déploiement Web, cette Coding Week nous a permis de consolider des compétences autant techniques qu'organisationnelles, dépassant largement le simple cadre du développement logiciel classique :
+
+### 1. Organisation, Agilité et Collaboration Industrielle
+Nous avons appris à structurer et à cadencer notre charge de travail en adoptant des méthodologies agiles. En utilisant Jira pour la répartition et le suivi granulaire des tickets de développement, et Git/GitHub pour le versioning asynchrone de notre code, nous nous sommes confrontés aux réalités du travail d'équipe. La séparation explicite des responsabilités (Teamlead, Data Engineer, ML Engineer, Web Developer, Data Analyst) nous a contraints à communiquer efficacement, à documenter notre code, à gérer les conflits de fusion (*merge conflicts*) et à assurer une intégration fluide des différents sous-systèmes logiciels.
+
+### 2. Ingénierie des Données (Data Engineering) Solide
+Nous avons saisi fondamentalement qu'un projet de Data Science ne se résume pas à l'algorithme : l'adage "Garbage In, Garbage Out" n'a jamais été aussi vrai. Nous avons conçu de toutes pièces un pipeline de prétraitement robuste, modulaire et encapsulé en adoptant un paradigme fonctionnel. Nous y avons intégré l'optimisation de l'empreinte mémoire, l'encodage ciblé des variables catégorielles et la projection via `StandardScaler` (tout en maîtrisant les risques de *Data Leakage*). Plus encore, soumettre l'intégralité de ce cycle de données à des tests unitaires systématiques ("Test-Driven" avec *Pytest*) nous a inculqué l'exigence de la fiabilité dans le domaine médical.
+
+### 3. Machine Learning et Modélisation Avancée Appliquée
+Face à une problématique de diagnostic de santé requérant un grand degré de certitude, nous avons compris qu'il fallait tester et confronter de nombreux algorithmes (Random Forest, SVM, LightGBM, CatBoost, Logistic Regression). Au-delà du code d'entraînement, nous avons surtout appris à lire et interpréter les métriques d'évaluation ; nous avons rejeté le seul recours à l'Exactitude globale (Accuracy) au profit de l'aire sous la courbe (AUC-ROC) et du F1-Score pour appréhender correctement une distribution asymétrique de patients malades/sains.
+
+### 4. La puissance de l'Explicabilité et de la Transparence Médicale (XAI)
+Ce fut l'une de nos révélations majeures : dans l'écosystème médical moderne, la prédiction d'un modèle "Boîte Noire", même avec une précision de 99%, est dénuée de valeur si le praticien ne peut pas la comprendre et en assumer la responsabilité. L'intégration technique de la théorie des jeux avec la bibliothèque SHAP (*Shapley Additive exPlanations*) a été un défi passionnant. Nous sommes maintenant capables de générer des graphiques locaux ("Waterfalls") pour justifier la moindre prédiction probabiliste, décantant mathématiquement le poids d'un taux de Leucocytes ou de la fièvre dans la décision finale d'urgence chirurgicale.
+
+### 5. Développement Applicatif Interactif Data-Driven (Streamlit)
+Pour conclure le cycle de vie du modèle, nous avons exploré *Streamlit* pour orchestrer le passage de "Script Python local" à "Dashboard Web Universel". Nous avons appris comment concevoir une interface Web "Responsive", ergonomique pour un futur corps médical (gestion par formulaires, sidebar, spinners de chargement), comment lier nos modèles sérialisés (*joblib*) à des clics d'utilisateurs en temps réel, et comment assurer la génération de graphiques dynamiques sur le navigateur.
 
 ## ⚠️ Limites du Projet
 
