@@ -2,52 +2,69 @@
 
 ## Présentation
 
-**PediAppendix** est un système d'aide à la décision clinique pour le diagnostic
-de l'appendicite pédiatrique.
+**PediAppendix** est un système d'aide à la décision clinique pour le diagnostic de l'appendicite pédiatrique. À partir de **10 paramètres cliniques courants** (examen physique, biologie, échographie), il prédit la probabilité d'appendicite et fournit une explication SHAP détaillée.
 
-À partir de **10 paramètres cliniques courants** (examen physique, biologie,
-échographie), il prédit la probabilité d'appendicite et fournit une explication
-SHAP détaillée de chaque prédiction.
+### 👥 Équipe Projet — GROUPE 31
+| Membre | Rôle |
+|--------|------|
+| **Coulibaly ELISE** | Teamlead & Coordination |
+| **Diallo Nassirou Amadou Oumar** | Data Engineer & Pipeline |
+| **MOHAMED JOUAHAR** | IA Engineer & Modélisation |
+| **Sanogo** | Web Developer (Streamlit) |
+| **Ange Sarah** | Data Analyst (EDA) |
 
 **Dataset :** Regensburg Pediatric Appendicitis (UCI), n = 776 patients.  
-**Modèle :** Random Forest — AUC-ROC = **0.9287** sur le jeu de test (n = 156).
+**Modèle retenu :** Random Forest — AUC-ROC = **0.9359** (Best model).
+
+### 📈 Résultats et Interprétabilité
+
+| Courbe ROC (Performance) | Importance des Features (SHAP) |
+|:---:|:---:|
+| ![ROC Curve](file:///c:/Users/clyel/Desktop/new/CodingWeek30-2026/reports/figures/roc_Random_Forest.png) | ![SHAP Summary](file:///c:/Users/clyel/Desktop/new/CodingWeek30-2026/reports/figures/shap_summary.png) |
+
+> [!NOTE]
+> Le modèle Random Forest a été sélectionné pour sa stabilité en validation croisée (moyenne 0.92) et son excellente capacité de généralisation sur le jeu de test.
 
 ---
 
+
+## Présentation du Groupe projet 
+ GROUPE 31 
+
+Coulibaly eli... (Teamlead)
+....
+.....
+
+---
 ## Architecture du projet
 
 ```
 projet/
 ├── data/
-│   ├── raw/          data_finale.xlsx         (776 patients, 27 variables)
+│   ├── raw/          dataset.xlsx             (776 patients, 27 variables)
 │   └── processed/    processed_data.joblib    (split train/test stratifié 80/20)
 ├── models/
-│   ├── random_forest.joblib        ← modèle de production (AUC 0.9287)
-│   ├── gradient_boosting.joblib    (AUC 0.9141)
-│   ├── logistic_regression.joblib  (AUC 0.8283)
-│   └── svm.joblib                  (AUC 0.8102)
+│   ├── preprocessor.pkl           ← préprocesseur (StandardScaler)
+│   ├── random_forest_model.pkl    ← modèle de production (AUC ~0.92)
+│   └── ...
 ├── src/
 │   ├── data_processing.py   pipeline de traitement des données
 │   ├── train_model.py       entraînement et évaluation des modèles
 │   └── evaluate_model.py    prédiction individuelle + explications SHAP
 ├── tests/
 │   ├── test_data_processing.py   11 tests
-│   ├── test_model.py             15 tests
-│   └── test_evaluate_model.py    8 tests        → 34 tests total, tous passent
+│   └── test_model.py             2 tests        → 13 tests total, tous passent
 ├── app/
 │   ├── app.py               interface FastAPI
+│   ├── static/              CSS et assets
 │   └── templates/
-│       ├── index.html       formulaire de saisie (10 features)
-│       └── result.html      page de résultat + graphique SHAP
+│       ├── landing_page.html
+│       ├── auth.html
+│       ├── diagnosis_form.html
+│       └── diagnosis_result.html
 ├── notebooks/
 │   └── eda.ipynb            analyse exploratoire du dataset
-├── MD/
-│   ├── README.md            index de la documentation
-│   ├── 01_data_processing.md
-│   ├── 02_train_model.md
-│   ├── 03_evaluate_model.md
-│   └── 04_webapp.md
-├── conftest.py              configuration pytest (sys.path)
+├── MD/                      Documentation technique détaillée
 ├── requirements.txt
 └── Dockerfile
 ```
@@ -56,7 +73,9 @@ projet/
 
 # 📊 Organisation & Gestion de Projet
 
-Le projet a été géré via **Jira Atlassian**. Voici la répartition des tâches :
+Le projet a été géré via **Jira Atlassian**. 
+Nous avons opte pour un partage des tahces par role , selon les 5 roles repartis  
+Voici la répartition des tâches :
 
 ### 👤 Rôle : teamlead
 <details>
@@ -191,20 +210,26 @@ python src/data_processing.py
 ### 2. Entraînement des modèles (une seule fois)
 ```bash
 python src/train_model.py
-# → models/random_forest.joblib (+ 3 autres modèles)
+# → models/random_forest_model.pkl
 ```
 
 ### 3. Tests unitaires
 ```bash
 python -m pytest tests/ --rootdir="." -q
-# 34 passed
+# 13 passed
 ```
 
 ### 4. Lancement de l'application web
 ```bash
-uvicorn app.app:app --host 0.0.0.0 --port 8000 --reload
-# → http://localhost:8000
+streamlit run app/app.py
+# → http://localhost:8501
 ```
+
+### 🧠 Prompt Engineering Task
+L'IA a été utilisée pour :
+1. **Optimisation** : Génération de la fonction `optimize_memory` pour réduire l'empreinte mémoire de 18%.
+2. **Refactoring** : Migration de l'interface FastAPI vers Streamlit pour une intégration native des graphiques SHAP.
+3. **Robustesse** : Création de tests unitaires dynamiques s'adaptant aux colonnes du préprocesseur.
 
 ### Docker
 ```bash
@@ -216,7 +241,7 @@ docker run -p 8000:8000 pediappendix
 
 ## Paradigme de développement
 
-Ce projet suit un paradigme **fonctionnel strict** :
+Ce projet suit un paradigme **fonctionnel ** :
 - **Une fonction = une tâche précise et testable**
 - **Un test = une fonction = une assertion**
 - Pas d'état global mutable entre fonctions

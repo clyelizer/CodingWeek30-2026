@@ -1,7 +1,7 @@
 """
 tests/test_data_processing.py
 ==============================
-Paradigme fonctionnel strict : un test = une fonction = une assertion précise.
+Paradigme fonctionnel : un test = une fonction = une assertion précise.
 
 Chaque test est :
   - Indépendant (pas d'état partagé entre tests)

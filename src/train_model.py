@@ -15,10 +15,14 @@ from evaluate_model import evaluate_model
 from shap_explanations import generate_shap_summary, plot_waterfall
 
 # Configuration
-FILEPATH     = 'data/raw/dataset.xlsx'
+FILEPATH     = 'data/processed/data_finale.xlsx'
 TARGET_COL   = 'Diagnosis'
 TEST_SIZE    = 0.2
 RANDOM_STATE = 42
+
+def load_model(path):
+    """Charge un modèle sauvegardé au format .joblib ou .pkl."""
+    return joblib.load(path)
 
 def build_models():
     """Instancie les trois modèles sélectionnés."""
