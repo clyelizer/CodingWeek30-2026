@@ -35,7 +35,7 @@ from src.data_processing import (
 
 RAW_PATH = (
     pathlib.Path(__file__).resolve().parent.parent
-    / "data" / "raw" / "data_finale.xlsx"
+    / "data" / "processed" / "data_finale.xlsx"
 )
 
 
