@@ -33,27 +33,31 @@ from sklearn.model_selection import train_test_split
 # Constantes du projet
 # ---------------------------------------------------------------------------
 
-FEATURE_COLS: list[str] = [
-    "Lower_Right_Abd_Pain",
-    "Migratory_Pain",
+NUMERIC_FEATURES: list[str] = [
     "Body_Temperature",
     "WBC_Count",
     "CRP",
     "Neutrophil_Percentage",
-    "Ipsilateral_Rebound_Tenderness",
     "Appendix_Diameter",
-    "Nausea",
     "Age",
 ]
 
+CATEGORICAL_FEATURES: list[str] = [
+    "Lower_Right_Abd_Pain",
+    "Migratory_Pain",
+    "Ipsilateral_Rebound_Tenderness",
+    "Nausea",
+]
+
+FEATURE_COLS: list[str] = NUMERIC_FEATURES + CATEGORICAL_FEATURES
 TARGET_COL: str = "Diagnosis"
 
 # Colonnes avec des valeurs textuelles "yes"/"no" à encoder en 1/0
 BINARY_COLS: list[str] = [
     "Lower_Right_Abd_Pain",
     "Migratory_Pain",
-    "Ipsilateral_Rebound_Tenderness",
     "Nausea",
+    "Ipsilateral_Rebound_Tenderness",
 ]
 
 
