@@ -15,21 +15,20 @@ Features du modèle (10) :
 Pour lancer :
   python app.py [--host 0.0.0.0] [--port 8000] [--reload]
   ou : uvicorn app:app --reload
-
-Design : templates premium (landing_page, auth avec flip 3D, diagnosis_console).
-Auth   : session cookie signé HMAC — admin/admin123 (sans base de données).
 """
 
 from __future__ import annotations
 
 import sys
 import pathlib
+import sqlite3
+import json
 import os
 import time
 import base64
 import hashlib
 import hmac
-import json
+from datetime import datetime, timezone
 
 import joblib
 import pandas as pd
@@ -46,7 +45,6 @@ _ROOT = pathlib.Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from src.train_model import load_model
 from src.evaluate_model import (
     predict_proba_safe,
     compute_shap_values,
@@ -90,55 +88,81 @@ _BINARY_COLS = {
     "ipsilateral_rebound_tenderness",
 }
 
-# ---------------------------------------------------------------------------
-# Auth : session simplifiée (HMAC, sans base de données)
-# ---------------------------------------------------------------------------
-_SECRET_KEY = os.environ.get("PEDIA_SECRET", "dev-secret-please-change")
-_SESSION_COOKIE = "pedi_session"
-_SESSION_DURATION = 4 * 60 * 60  # 4 heures
 
-# Utilisateur administrateur codé en dur (usage local / démo)
-_ADMIN_USER = "admin"
-_ADMIN_PASS = "admin123"
+def _is_predictive_estimator(obj: object) -> bool:
+    """
+    Vérifie le contrat minimal attendu pour la prédiction.
 
-
-def _make_session_token(username: str) -> str:
-    """Génère un token de session signé HMAC, encodé URL-safe base64."""
-    expires = int(time.time()) + _SESSION_DURATION
-    payload = f"{username}|{expires}"
-    signature = hmac.new(_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
-    return base64.urlsafe_b64encode(f"{payload}|{signature}".encode()).decode()
+    Retourne True si l'objet fourni expose les méthodes `predict` et `predict_proba`.
+    Utilisé pour valider dynamiquement des artefacts chargés depuis disque.
+    Cette vérification favorise la robustesse au démarrage de l'application.
+    """
+    return callable(getattr(obj, "predict", None)) and callable(getattr(obj, "predict_proba", None))
 
 
-def _verify_session_token(token: str) -> str | None:
-    """Vérifie un token et retourne le username ou None."""
-    try:
-        raw = base64.urlsafe_b64decode(token.encode()).decode()
-        username, expires, signature = raw.split("|")
-        expected = hmac.new(_SECRET_KEY.encode(), f"{username}|{expires}".encode(), hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(signature, expected):
-            return None
-        if int(expires) < int(time.time()):
-            return None
-        return username
-    except Exception:
-        return None
+def _load_model_artifact(model_dir: pathlib.Path | None = None) -> object:
+    """
+    Charge un modèle sérialisé avec joblib depuis plusieurs noms standards.
 
+    Pourquoi ce loader existe:
+    - L'extension (.pkl/.joblib) ne suffit pas à garantir la compatibilité.
+    - Le format utile dépend surtout de la manière dont l'objet a été sauvegardé.
+    - On valide donc l'objet chargé via son contrat (predict/predict_proba),
+      au lieu de faire un simple renommage de fichier.
+    """
+    model_dir = model_dir or _MODEL_DIR
+    candidate_names = [
+        "random_forest.joblib",
+        "Random_Forest.pkl",
+        "random_forest.pkl",
+        "RandomForest.pkl",
+    ]
 
-def _get_current_user(request: Request) -> str | None:
-    token = request.cookies.get(_SESSION_COOKIE)
-    if not token:
-        return None
-    return _verify_session_token(token)
+    checked_paths: list[str] = []
+    load_errors: list[str] = []
+
+    for name in candidate_names:
+        path = model_dir / name
+        if not path.exists():
+            continue
+
+        checked_paths.append(str(path))
+        try:
+            artifact = joblib.load(path)
+        except Exception as exc:
+            load_errors.append(f"{path.name}: lecture impossible ({exc})")
+            continue
+
+        if _is_predictive_estimator(artifact):
+            return artifact
+
+        load_errors.append(
+            f"{path.name}: objet chargé invalide (predict/predict_proba absents)"
+        )
+
+    if not checked_paths:
+        raise FileNotFoundError(
+            "Aucun artefact modèle trouvé dans "
+            f"{model_dir}. Noms testés: {candidate_names}"
+        )
+
+    raise TypeError(
+        "Artefacts trouvés mais non exploitables pour la prédiction. "
+        f"Fichiers testés: {checked_paths}. Détails: {load_errors}"
+    )
 
 
 def _load_resources() -> None:
-    """Charge le modèle RF et les médianes du test set comme valeurs par défaut."""
+    """Charge le meilleur modèle (Pipeline avec scaler intégré) et les valeurs par défaut."""
     global _model, _feature_cols, _defaults
-    _model = load_model(_MODEL_DIR / "random_forest.joblib")
+    _model = _load_model_artifact(_MODEL_DIR)
+
     processed = joblib.load(_DATA_DIR / "processed_data.joblib")
     _feature_cols = processed["feature_cols"]
     _defaults = processed["X_test"].median().to_dict()
+
+
+
 
 
 _load_resources()
@@ -149,6 +173,12 @@ _load_resources()
 # ---------------------------------------------------------------------------
 
 def _get_db_connection() -> sqlite3.Connection:
+    """
+    Ouvre et retourne une connexion SQLite configurée.
+
+    Configure `row_factory` pour obtenir des lignes accessibles comme des dicts.
+    Centralise la configuration DB pour faciliter tests et maintenance.
+    """
     conn = sqlite3.connect(str(_DB_PATH), detect_types=sqlite3.PARSE_DECLTYPES)
     conn.row_factory = sqlite3.Row
     return conn
@@ -159,13 +189,24 @@ def _get_db_connection() -> sqlite3.Connection:
 # ---------------------------------------------------------------------------
 
 def _hash_password(password: str) -> str:
-    """Hash du mot de passe (PBKDF2 + sel aléatoire)."""
+    """
+    Hash le mot de passe en utilisant PBKDF2 + sel aléatoire.
+
+    Renforce la résistance aux attaques par dictionnaire et rainbow tables.
+    Renvoie une chaîne encodée en base64 contenant sel+digest.
+    """
     salt = os.urandom(16)
     dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
     return base64.b64encode(salt + dk).decode()
 
 
 def _verify_password(password: str, hashed: str) -> bool:
+    """
+    Vérifie qu'un mot de passe correspond au `hashed` stocké.
+
+    Décode le sel+digest stocké, recalcule PBKDF2 et compare en temps constant.
+    Retourne True si la vérification réussit, False sinon.
+    """
     try:
         raw = base64.b64decode(hashed.encode())
         salt, dk = raw[:16], raw[16:]
@@ -176,7 +217,12 @@ def _verify_password(password: str, hashed: str) -> bool:
 
 
 def _make_session_token(username: str) -> str:
-    """Génère un token signé pour la session."""
+    """
+    Génère un token de session signé et encodé.
+
+    Le token contient `username|expires|signature` et est encodé URL-safe en base64.
+    Permet gestion stateless des sessions sans stockage côté serveur.
+    """
     expires = int(time.time()) + _SESSION_DURATION
     payload = f"{username}|{expires}"
     signature = hmac.new(_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
@@ -184,6 +230,12 @@ def _make_session_token(username: str) -> str:
 
 
 def _verify_session_token(token: str) -> str | None:
+    """
+    Vérifie et décode un token de session.
+
+    Valide la signature HMAC et la date d'expiration; retourne `username` si valide.
+    Retourne None en cas d'échec (signature invalide ou expiré).
+    """
     try:
         raw = base64.urlsafe_b64decode(token.encode()).decode()
         username, expires, signature = raw.split("|")
@@ -205,7 +257,12 @@ def _get_current_user(request: Request) -> str | None:
 
 
 def _get_user(username: str) -> dict | None:
-    """Retourne l'utilisateur si existant."""
+    """
+    Retourne les informations utilisateur pour `username` si présent en base.
+
+    Initialise la DB si besoin, exécute la requête et renvoie un dict ou None.
+    Utilisé pour l'authentification et la gestion d'accès dans les routes.
+    """
     _init_db()
     with _get_db_connection() as conn:
         row = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
@@ -213,7 +270,12 @@ def _get_user(username: str) -> dict | None:
 
 
 def _create_default_admin() -> None:
-    """Crée l'utilisateur admin par défaut si absent."""
+    """
+    Crée un utilisateur `admin` par défaut si absent dans la table `users`.
+
+    Utilise `_hash_password` pour stocker le mot de passe de manière sécurisée.
+    Destiné à faciliter l'accès initial lors du déploiement local ou tests.
+    """
     _init_db()
     with _get_db_connection() as conn:
         exists = conn.execute("SELECT 1 FROM users WHERE username = ?", ("admin",)).fetchone()
@@ -225,7 +287,12 @@ def _create_default_admin() -> None:
 
 
 def _init_db() -> None:
-    """Crée la base de données si elle n'existe pas."""
+    """
+    Initialise la base SQLite (création des tables si manquantes).
+
+    Crée le dossier parent si nécessaire et les tables `records` et `users`.
+    Insère l'utilisateur admin par défaut via `INSERT OR IGNORE`.
+    """
     _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     with _get_db_connection() as conn:
         conn.execute(
@@ -286,10 +353,15 @@ def _init_db() -> None:
 
 
 def _save_record(record: dict) -> None:
-    """Sauve une analyse dans la base de données."""
+    """
+    Sauvegarde une entrée d'analyse clinique dans la table `records`.
+
+    Complète le champ `created_at` si absent et écrit la ligne en base.
+    Utilisé pour conserver l'historique consultable par l'API.
+    """
     _init_db()
     record = dict(record)
-    record.setdefault("created_at", datetime.utcnow().isoformat())
+    record.setdefault("created_at", datetime.now(timezone.utc).isoformat())
 
     fields = [
         "created_at",
@@ -338,7 +410,12 @@ def _save_record(record: dict) -> None:
 
 
 def _get_history(limit: int = 20) -> list[dict]:
-    """Retourne les dernières analyses enregistrées."""
+    """
+    Retourne les dernières analyses enregistrées au format liste de dicts.
+
+    Effectue une requête SQL ordonnée par `created_at` décroissant et applique la limite.
+    Utile pour afficher l'historique sur l'interface admin.
+    """
     _init_db()
     with _get_db_connection() as conn:
         cursor = conn.execute(
@@ -410,49 +487,45 @@ def _build_input_row(form_data: dict) -> pd.DataFrame:
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request) -> HTMLResponse:
-    """Page d'accueil (landing page premium)."""
-    return templates.TemplateResponse("landing_page.html", {"request": request})
+    """Affiche la page d'accueil."""
+    return templates.TemplateResponse(
+        request,
+        "landing_page.html",
+        {},
+    )
 
-
-# ---------------------------------------------------------------------------
-# Auth routes
-# ---------------------------------------------------------------------------
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request) -> HTMLResponse:
-    """Page de connexion — animation flip login / créer un compte."""
+    """Page de connexion."""
     if _get_current_user(request):
         return RedirectResponse("/form", status_code=303)
-    return templates.TemplateResponse("auth.html", {"request": request})
+
+    return templates.TemplateResponse(
+        request,
+        "auth.html",
+        {},
+    )
 
 
 @app.post("/login")
-async def login(
-    request: Request,
-    username: str = Form(...),
-    password: str = Form(...),
-):
-    """Vérifie admin/admin123 et pose un cookie de session signé."""
-    if username == _ADMIN_USER and password == _ADMIN_PASS:
-        token = _make_session_token(username)
-        response = RedirectResponse(url="/form", status_code=303)
-        response.set_cookie(_SESSION_COOKIE, token, httponly=True, samesite="lax")
-        return response
-    return templates.TemplateResponse(
-        "auth.html",
-        {"request": request, "error": "Identifiant ou mot de passe incorrect."},
-        status_code=401,
-    )
+async def login(request: Request, username: str = Form(...), password: str = Form(...)):
+    """Traite la connexion et place un cookie de session."""
+    user = _get_user(username)
+    if not user or not _verify_password(password, user.get("password_hash", "")):
+        return templates.TemplateResponse(
+            request,
+            "auth.html",
+            {
+                "error": "Identifiant ou mot de passe incorrect.",
+            },
+            status_code=401,
+        )
 
-
-@app.post("/register")
-async def register(request: Request):
-    """Stub création de compte — renvoie vers auth avec message."""
-    return templates.TemplateResponse(
-        "auth.html",
-        {"request": request, "error": "La création de compte est désactivée en mode démo. Utilisez admin / admin123."},
-        status_code=200,
-    )
+    token = _make_session_token(username)
+    response = RedirectResponse(url="/form", status_code=303)
+    response.set_cookie(_SESSION_COOKIE, token, httponly=True, samesite="lax")
+    return response
 
 
 @app.get("/logout")
@@ -465,15 +538,19 @@ async def logout() -> RedirectResponse:
 
 @app.get("/form", response_class=HTMLResponse)
 async def read_form(request: Request) -> HTMLResponse:
-    """Affiche la console de diagnostic clinique."""
+    """Affiche le formulaire de saisie clinique avec section résultats."""
     user = _get_current_user(request)
     if not user:
         return RedirectResponse("/login", status_code=303)
-    return templates.TemplateResponse("diagnosis_console.html", {
-        "request":  request,
-        "defaults": _defaults,
-        "user":     user,
-    })
+
+    return templates.TemplateResponse(
+        request,
+        "diagnosis_console.html",
+        {
+            "defaults": _defaults,
+            "user": user,
+        },
+    )
 
 
 @app.post("/predict", response_class=HTMLResponse)
@@ -491,8 +568,11 @@ async def predict(
     ipsilateral_rebound_tenderness: str = Form(default="no"),
 ) -> HTMLResponse:
     """
-    Route de prédiction HTML.
-    Rend la console de diagnostic avec les résultats inline.
+    Route de prédiction.
+
+    Reçoit les 10 champs du formulaire, construit le vecteur feature,
+    calcule la probabilité d'appendicite, génère le graphique SHAP
+    et renvoie la page résultat.
     """
     user = _get_current_user(request)
     if not user:
@@ -511,13 +591,8 @@ async def predict(
         "ipsilateral_rebound_tenderness": ipsilateral_rebound_tenderness,
     }
 
-    X    = _build_input_row(form_data)
-    
-    # Vérifier que le modèle est chargé
-    if _model is None:
-        raise RuntimeError("Le modèle n'a pas pu être chargé")
-    
-    prob = predict_proba_safe(_model, X)
+    X_raw = _build_input_row(form_data)
+    prob = predict_proba_safe(_model, X_raw)
 
     decision = "appendicite" if prob >= 0.5 else "pas d'appendicite"
     risk_class = "danger" if prob >= 0.5 else "success"
@@ -525,56 +600,93 @@ async def predict(
     # Graphique SHAP (non-bloquant en cas d'erreur)
     shap_b64: str | None = None
     try:
-        sv, base_val = compute_shap_values(_model, X)
-        shap_b64 = make_shap_waterfall_b64(sv, base_val, X)
+        sv, base_val = compute_shap_values(_model, X_raw)
+        shap_b64 = make_shap_waterfall_b64(sv, base_val, X_raw)
     except Exception as exc:
         print(f"SHAP error (non-fatal): {exc}")
 
-    return templates.TemplateResponse("diagnosis_console.html", {
-        "request":    request,
-        "user":       user,
-        "prob":       f"{prob * 100:.1f}",
-        "decision":   decision,
-        "risk_class": risk_class,
-        "shap_b64":   shap_b64,
-        "form":       form_data,
-        "defaults":   _defaults,
-    })
+    return templates.TemplateResponse(
+        request,
+        "diagnosis_console.html",
+        {
+            "user": user,
+            "prob": f"{prob * 100:.1f}",
+            "decision": decision,
+            "risk_class": risk_class,
+            "shap_b64": shap_b64,
+            "form": form_data,
+            "defaults": _defaults,
+        },
+    )
 
-
-# ---------------------------------------------------------------------------
-# API JSON (pour preview temps réel dans diagnosis_console.html)
-# ---------------------------------------------------------------------------
 
 @app.post("/api/predict")
 async def api_predict(request: Request) -> dict:
-    """API JSON pour prédiction temps réel — utilisée par le frontend AJAX."""
+    """API pour prédiction — retourne JSON pour AJAX."""
     if not _get_current_user(request):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Non autorisé")
 
     form_values = await request.form()
-    form_data: dict[str, str | float] = {k: v for k, v in form_values.items()}
 
-    X    = _build_input_row(form_data)
-    prob = predict_proba_safe(_model, X)
+    # Normalize values (FastAPI Form returns UploadFile or str)
+    form_data: dict[str, str | float] = {
+        k: v for k, v in form_values.items()
+    }
 
-    decision   = "appendicite" if prob >= 0.5 else "pas d'appendicite"
-    risk_class = "danger"      if prob >= 0.5 else "success"
+    # Construire le DataFrame d'entrée (uniquement les champs attendus par le modèle)
+    X_raw = _build_input_row(form_data)
+    prob = predict_proba_safe(_model, X_raw)
 
+    decision = "appendicite" if prob >= 0.5 else "pas d'appendicite"
+    risk_class = "danger" if prob >= 0.5 else "success"
+
+    # Graphique SHAP (non-bloquant en cas d'erreur)
     shap_b64: str | None = None
     try:
-        sv, base_val = compute_shap_values(_model, X)
-        shap_b64 = make_shap_waterfall_b64(sv, base_val, X)
+        sv, base_val = compute_shap_values(_model, X_raw)
+        shap_b64 = make_shap_waterfall_b64(sv, base_val, X_raw)
     except Exception as exc:
         print(f"SHAP error (non-fatal): {exc}")
 
-    return {
-        "prob":       f"{prob * 100:.1f}",
-        "decision":   decision,
+    # Historique
+    record = {
+        **form_data,
+        "prob": float(f"{prob * 100:.1f}"),
+        "decision": decision,
         "risk_class": risk_class,
-        "shap_b64":   shap_b64,
-        "form":       form_data,
+        "shap_b64": shap_b64,
+        "raw_json": json.dumps(form_data, ensure_ascii=False),
     }
+    try:
+        _save_record(record)
+    except Exception as exc:
+        print(f"DB save error (non-fatal): {exc}")
+
+    return {
+        "prob": f"{prob * 100:.1f}",
+        "decision": decision,
+        "risk_class": risk_class,
+        "shap_b64": shap_b64,
+        "form": form_data,
+    }
+
+
+@app.get("/api/history")
+async def api_history(request: Request, limit: int = 20, id: int | None = None) -> dict:
+    """Retourne l'historique des analyses (dernières entrées).
+
+    Si `id` est fourni, retourne uniquement l'enregistrement demandé.
+    """
+    if not _get_current_user(request):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Non autorisé")
+
+    if id is not None:
+        _init_db()
+        with _get_db_connection() as conn:
+            row = conn.execute("SELECT * FROM records WHERE id = ?", (id,)).fetchone()
+        return {"records": [dict(row)] if row else []}
+
+    return {"records": _get_history(limit)}
 
 
 # ---------------------------------------------------------------------------

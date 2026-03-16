@@ -1,0 +1,23 @@
+<nav class="navbar navbar-expand-lg navbar-dark pedi-nav fixed-top" aria-label="Navigation principale">
+    <div class="container-fluid">
+        <a class="navbar-brand pedi-brand" href="/">Pedi<span>Appendix</span></a>
+
+        {% if header_show_actions %}
+        <div class="d-flex gap-2 align-items-center pedi-header-actions">
+            {% if header_user %}
+            <span class="small me-2 pedi-user-label">Connecte : <strong>{{ header_user }}</strong></span>
+            {% endif %}
+            <button id="nav-new" class="btn btn-sm pedi-btn-ghost">Nouvelle Consultation</button>
+            <button id="nav-history" class="btn btn-sm pedi-btn-ghost">Historique</button>
+            <button id="nav-pdf" class="btn btn-sm pedi-btn-ghost">Rapport Clinique</button>
+            <button id="nav-about" class="btn btn-sm pedi-btn-ghost">A propos</button>
+            <button id="nav-logout" class="btn btn-sm pedi-btn-ghost">Deconnexion</button>
+        </div>
+        {% else %}
+        <div class="d-flex gap-2 align-items-center pedi-header-actions">
+            <a class="btn btn-sm pedi-btn-ghost" href="/">Accueil</a>
+            <a class="btn btn-sm pedi-btn" href="/login">Connexion</a>
+        </div>
+        {% endif %}
+    </div>
+</nav>

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<!--
+    Template: auth.html
+    Description: Connexion + Création de compte avec animation switch flip 3D.
+    Placeholders: `error` (optionnel, str) dans le contexte.
+-->
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PediAppendix • Connexion</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/css/unified_theme.css">
+    <style>
+        /* ─── PAGE ───────────────────────────────────────── */
+        .auth-page {
+            min-height: calc(100vh - 76px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 16px;
+        }
+
+        /* ─── FLIP CONTAINER ─────────────────────────────── */
+        .flip-wrapper {
+            width: 100%;
+            max-width: 500px;
+            perspective: 1400px;
+        }
+
+        .flip-inner {
+            position: relative;
+            width: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.65s cubic-bezier(0.4, 0.2, 0.2, 1);
+        }
+
+        .flip-inner.flipped {
+            transform: rotateY(180deg);
+        }
+
+        /* ─── CARD FACES ─────────────────────────────────── */
+        .flip-face {
+            width: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+            padding: 40px 36px;
+        }
+
+        .flip-face-back {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: rotateY(180deg);
+        }
+
+        /* ─── CARD HEADER ────────────────────────────────── */
+        .auth-icon {
+            width: 56px; height: 56px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(0,201,167,.18), rgba(30,110,255,.18));
+            border: 1px solid rgba(0,201,167,.25);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.6rem; margin: 0 auto 18px;
+        }
+
+        .auth-title {
+            font-family: var(--font-head);
+            font-size: 1.55rem;
+            color: var(--white);
+            text-align: center;
+            margin-bottom: 6px;
+            letter-spacing: .01em;
+        }
+
+        .auth-sub {
+            font-size: 0.82rem;
+            color: var(--muted);
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        /* ─── FORM ELEMENTS ──────────────────────────────── */
+        .form-label {
+            font-size: .75rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            background: rgba(255,255,255,.07) !important;
+            border: 1px solid rgba(255,255,255,.18) !important;
+            border-radius: 10px !important;
+            color: var(--white) !important;
+            font-size: .9rem;
+            padding: 11px 14px;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        .form-control::placeholder {
+            color: rgba(244,248,255,.3);
+        }
+
+        .form-control:focus {
+            border-color: rgba(0,201,167,.7) !important;
+            box-shadow: 0 0 0 3px rgba(0,201,167,.12) !important;
+            background: rgba(255,255,255,.1) !important;
+            color: var(--white) !important;
+        }
+
+        /* ─── SWITCH TAB ──────────────────────────────────── */
+        .switch-tab {
+            display: flex;
+            background: rgba(255,255,255,.05);
+            border: 1px solid var(--border);
+            border-radius: 99px;
+            padding: 4px;
+            margin-bottom: 28px;
+        }
+
+        .switch-tab button {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            font-family: var(--font-body);
+            font-size: .8rem;
+            font-weight: 600;
+            letter-spacing: .04em;
+            padding: 9px 0;
+            border-radius: 99px;
+            cursor: pointer;
+            transition: all .25s;
+        }
+
+        .switch-tab button.active {
+            background: linear-gradient(135deg, var(--teal), var(--blue));
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(0,201,167,.3);
+        }
+
+        /* ─── SUBMIT BUTTON ──────────────────────────────── */
+        .btn-auth {
+            width: 100%;
+            background: linear-gradient(135deg, var(--teal) 0%, var(--blue) 100%);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-family: var(--font-body);
+            font-size: .9rem;
+            font-weight: 600;
+            padding: 13px;
+            cursor: pointer;
+            transition: all .25s;
+            box-shadow: 0 6px 20px rgba(0,201,167,.25);
+            margin-top: 6px;
+            letter-spacing: .02em;
+        }
+
+        .btn-auth:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 28px rgba(0,201,167,.38);
+        }
+
+        /* ─── LINK TOGGLE ────────────────────────────────── */
+        .auth-switch-link {
+            text-align: center;
+            margin-top: 22px;
+            font-size: .8rem;
+            color: var(--muted);
+        }
+
+        .auth-switch-link a {
+            color: var(--teal);
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            transition: color .2s;
+        }
+
+        .auth-switch-link a:hover {
+            color: var(--teal-2, #00e6c0);
+        }
+
+        /* ─── ALERT ──────────────────────────────────────── */
+        .auth-alert {
+            background: rgba(255,107,107,.1);
+            border: 1px solid rgba(255,107,107,.25);
+            border-radius: 10px;
+            color: #ff8a8a;
+            font-size: .82rem;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* ─── DIVIDER ────────────────────────────────────── */
+        .auth-divider {
+            display: flex; align-items: center; gap: 12px;
+            margin: 22px 0;
+            color: var(--muted);
+            font-size: .72rem;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+
+        .auth-divider::before,
+        .auth-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* ─── HELP TEXT ──────────────────────────────────── */
+        .help-text {
+            font-size: .74rem;
+            color: var(--muted);
+            text-align: center;
+            margin-top: 22px;
+            line-height: 1.6;
+            padding-top: 18px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ─── PASSWORD STRENGTH ──────────────────────────── */
+        .pw-strength {
+            height: 3px;
+            border-radius: 99px;
+            background: var(--border);
+            margin-top: 6px;
+            overflow: hidden;
+        }
+
+        .pw-strength-bar {
+            height: 100%;
+            border-radius: 99px;
+            width: 0%;
+            transition: width .3s, background .3s;
+        }
+
+        .pw-hint {
+            font-size: .7rem;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body class="themed-app with-shared-header">
+    {% set header_show_actions = false %}
+    {% set header_user = None %}
+    {% include "partials/shared_header.html" %}
+
+    <div class="auth-page">
+        <div class="flip-wrapper">
+
+            <!-- ─── Tab switcher (outside the card, above it) ─── -->
+            <div class="switch-tab mb-3" id="global-tab">
+                <button class="active" id="tab-login" onclick="showLogin()">Connexion</button>
+                <button id="tab-register" onclick="showRegister()">Créer un compte</button>
+            </div>
+
+            <div class="flip-inner" id="flip-inner">
+
+                <!-- ══════════════ FACE AVANT : LOGIN ══════════════ -->
+                <div class="flip-face flip-face-front">
+                    <div class="auth-icon">🔐</div>
+                    <h2 class="auth-title">Connexion</h2>
+                    <p class="auth-sub">Accès professionnel au dossier patient</p>
+
+                    {% if error %}
+                    <div class="auth-alert">
+                        <span>⚠️</span> {{ error }}
+                    </div>
+                    {% endif %}
+
+                    <form method="post" action="/login" autocomplete="off">
+                        <div class="mb-3">
+                            <label class="form-label">Identifiant</label>
+                            <input type="text" name="username" class="form-control"
+                                   placeholder="Ex. admin" required autofocus>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mot de passe</label>
+                            <input type="password" name="password" class="form-control"
+                                   placeholder="••••••••" required>
+                        </div>
+                        <button type="submit" class="btn-auth">Se connecter →</button>
+                    </form>
+
+                    <div class="auth-switch-link">
+                        Pas encore de compte ?
+                        <a onclick="showRegister()">Créer un compte</a>
+                    </div>
+
+                    <p class="help-text">
+                        Identifiants de test : <strong style="color:var(--teal)">admin</strong> / <strong style="color:var(--teal)">admin123</strong><br>
+                        Vos données sont traitées conformément au RGPD.
+                    </p>
+                </div>
+
+                <!-- ══════════════ FACE ARRIÈRE : REGISTER ══════════════ -->
+                <div class="flip-face flip-face-back">
+                    <div class="auth-icon">✨</div>
+                    <h2 class="auth-title">Créer un compte</h2>
+                    <p class="auth-sub">Rejoignez la plateforme PediAppendix</p>
+
+                    <form method="post" action="/register" autocomplete="off">
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label">Prénom</label>
+                                <input type="text" name="first_name" class="form-control"
+                                       placeholder="Marie" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Nom</label>
+                                <input type="text" name="last_name" class="form-control"
+                                       placeholder="Dupont" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Identifiant</label>
+                            <input type="text" name="username" class="form-control"
+                                   placeholder="identifiant_unique" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mot de passe</label>
+                            <input type="password" name="password" id="reg-pw" class="form-control"
+                                   placeholder="Min. 8 caractères" required
+                                   oninput="checkPwStrength(this.value)">
+                            <div class="pw-strength">
+                                <div class="pw-strength-bar" id="pw-bar"></div>
+                            </div>
+                            <p class="pw-hint" id="pw-hint">Entrez un mot de passe</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirmer le mot de passe</label>
+                            <input type="password" name="confirm_password" class="form-control"
+                                   placeholder="••••••••" required>
+                        </div>
+
+                        <div class="auth-divider">Statut professionnel</div>
+
+                        <div class="mb-3">
+                            <select name="role" class="form-control" style="background:rgba(255,255,255,.07)!important;border:1px solid rgba(255,255,255,.18)!important;color:var(--white)!important;border-radius:10px!important;">
+                                <option value="">Sélectionnez votre rôle...</option>
+                                <option value="medecin">Médecin</option>
+                                <option value="interne">Interne</option>
+                                <option value="chirurgien">Chirurgien pédiatrique</option>
+                                <option value="urgentiste">Urgentiste</option>
+                                <option value="autre">Autre professionnel de santé</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn-auth">Créer mon compte →</button>
+                    </form>
+
+                    <div class="auth-switch-link">
+                        Déjà un compte ?
+                        <a onclick="showLogin()">Se connecter</a>
+                    </div>
+
+                    <p class="help-text">
+                        En créant un compte, vous acceptez que vos données soient utilisées dans un cadre médical professionnel.
+                    </p>
+                </div>
+
+            </div><!-- /flip-inner -->
+        </div><!-- /flip-wrapper -->
+    </div>
+
+    <script>
+        const flipInner = document.getElementById('flip-inner');
+        const tabLogin = document.getElementById('tab-login');
+        const tabRegister = document.getElementById('tab-register');
+
+        function showLogin() {
+            flipInner.classList.remove('flipped');
+            tabLogin.classList.add('active');
+            tabRegister.classList.remove('active');
+        }
+
+        function showRegister() {
+            flipInner.classList.add('flipped');
+            tabRegister.classList.add('active');
+            tabLogin.classList.remove('active');
+        }
+
+        function checkPwStrength(pw) {
+            const bar = document.getElementById('pw-bar');
+            const hint = document.getElementById('pw-hint');
+            let score = 0;
+            let msg = '';
+            let color = '';
+
+            if (pw.length >= 8) score++;
+            if (/[A-Z]/.test(pw)) score++;
+            if (/[0-9]/.test(pw)) score++;
+            if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+            switch (score) {
+                case 0:
+                case 1:
+                    msg = 'Trop faible'; color = '#ff6b6b';
+                    bar.style.width = '25%'; break;
+                case 2:
+                    msg = 'Faible'; color = '#ffd54f';
+                    bar.style.width = '50%'; break;
+                case 3:
+                    msg = 'Correct'; color = '#00c9a7';
+                    bar.style.width = '75%'; break;
+                case 4:
+                    msg = 'Fort 💪'; color = '#00e6c0';
+                    bar.style.width = '100%'; break;
+            }
+
+            bar.style.background = color;
+            hint.textContent = pw.length === 0 ? 'Entrez un mot de passe' : msg;
+            hint.style.color = pw.length === 0 ? 'var(--muted)' : color;
+        }
+
+        // Si erreur, rester sur login
+        {% if error %}
+        showLogin();
+        {% endif %}
+    </script>
+</body>
+</html>
